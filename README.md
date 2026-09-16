@@ -42,7 +42,7 @@
 | Mốc | Cần hoàn thành | Hạn (ca 3A) |
 |---|---|---|
 | — | Khai mạc 17:30 · phát đề 18:00 | 16/9 |
-| **CP1** | Canvas 4 ô + đội trưởng + **link repo GitHub công khai** | **19:30** · 16/9 |
+| **CP1** | Canvas 7 dòng (`02-guide.md` §1.5) + đội trưởng + **link repo GitHub công khai** | **19:30** · 16/9 |
 | **CP2** | Cho thấy **luồng hoạt động** — bấm thử được, hoặc sơ đồ luồng | **21:00** · 16/9 |
 | **CP3** | **Video thao tác** 30 giây + **số đo** (thử bao nhiêu, đúng bao nhiêu) | **16:00** · 17/9 |
 | **CP4** | Chốt `spec.md` — **khoá chuẩn "đạt"** · tự khai phần chưa xong | **21:00** · 17/9 |
@@ -68,7 +68,7 @@ Hai phòng cùng ca dùng chung lịch mốc. Năm link form phát đủ từ đ
 **Để làm gì:** chốt rõ **làm cho ai và giải vấn đề gì** trước khi bắt tay vào code. Bỏ qua bước này thì hay gặp cảnh làm xong mới nhận ra không ai cần đến.
 
 **Nộp:**
-- Canvas điền đủ 4 ô theo mẫu trong `01-challenge-brief.md`
+- Canvas điền đủ **7 dòng** theo scaffold trong `02-guide.md` §1.5 (track + đề · job executor · pain · bằng chứng đầu · lát cắt 1 câu · automation + willing users · phân công)
 - Họ tên và **mã học viên của đội trưởng**
 - **Link repo GitHub** đã để công khai
 - **Khai báo willing user** — người sẵn sàng cho nhóm thử sản phẩm ở CP5. Cần ít nhất 2 người, khai từ đây
