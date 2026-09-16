@@ -54,6 +54,7 @@ Với ≥3 ứng viên, mỗi cái một dòng: `ứng viên | bao nhiêu ngư�
 ## 1.5 Gặp TA ở CP1 cần show *(scaffold Canvas — 7 dòng)*
 
 Track (A–E) + đề đã chọn · job executor · pain một câu (ai-đang làm gì-vướng đâu-hậu quả) · 1-2 bằng chứng đầu tiên · **lát cắt MỘT CÂU** (1 user · 1 việc · 1 quyết định AI · 1 kết quả) · automation dự kiến + 1 dòng lý do · ≥3 willing users dự kiến · phân công có tên.
+Mẫu trống và 3 ví dụ canvas đạt của khoá trước: `05-canvas-cp1-examples.md`.
 *Kẹt >30' chưa chọn được hướng? Tự hỏi: "nhóm mình là user thật của cái nào nhiều nhất?" — chọn cái đó.*
 
 ---
