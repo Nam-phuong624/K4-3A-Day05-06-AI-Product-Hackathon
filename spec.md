@@ -6,8 +6,12 @@ Loại: [x] Tối ưu tính năng có sẵn  [ ] Tính năng mới
 
 ## §1. User & Job
 - **Job executor + workflow:** Học viên khóa AI20k đang học và xem lại bài giảng trực tiếp qua slide trên nền tảng VLearn; khi gặp một thuật ngữ khó hiểu, học viên bôi đen từ khóa hoặc bấm câu hỏi mẫu để được giải thích ngay trong lúc bài giảng đang diễn ra.
-- **Core JTBD:** Hiểu ngay bản chất trọng tâm của thuật ngữ kỹ thuật trên slide trong vòng 10 giây để không bị đứt mạch tư duy bài giảng. *(Không chứa chữ AI/tên sản phẩm)*
+- **Core JTBD (Đồng bộ chuẩn từ `jtbd-worksheet.md`):** Xác thực và làm rõ ngay lập tức bản chất các khái niệm kỹ thuật khó hiểu trên bài giảng dựa trên tài liệu chính thống trong vòng 10 giây để không bị sai lệch kiến thức hoặc đứt mạch tư duy. *(Chuẩn công thức: [verb] + [object] + [contextual clarifier], tuyệt đối không chứa chữ AI/tên sản phẩm)*
 - **Problem statement:** Khi học viên cần làm rõ một khái niệm trên bài giảng, người hỗ trợ thường đưa ra các câu trả lời phỏng đoán không có nguồn kiểm chứng hoặc tuôn cả bài văn dài hàng nghìn ký tự, khiến người học bị quá tải nhận thức và hoang mang về tính chính xác học thuật. *(Không chứa chữ AI/tên sản phẩm)*
+- **Three Core Job Stories (Trích xuất từ `jtbd-worksheet.md`):**
+  1. *JS1 (Grounding & Citation):* Khi gặp đoạn giải thích khó hiểu trên slide $\rightarrow$ muốn được giải thích súc tích kèm trích dẫn số trang/mã đoạn bài giảng $\rightarrow$ để nắm vững bài mà không phải tua lại cả video.
+  2. *JS2 (Hallucination Defense):* Khi tò mò hỏi khái niệm nâng cao chưa dạy (VD: PPO) $\rightarrow$ muốn được thông báo rõ ràng nội dung nằm ngoài phạm vi $\rightarrow$ để tránh hiểu nhầm kiến thức chắp vá.
+  3. *JS3 (Socratic Probing):* Khi bôi đen từ khóa ngắn/mơ hồ $\rightarrow$ muốn được gợi mở đào sâu 2 khía cạnh $\rightarrow$ để nhận câu trả lời đúng kích cỡ nhu cầu nhận thức.
 - **Evidence (Dữ liệu khai phá từ 13.494 turns log thực tế trong `data/vlearn-pack/`):**
   - **Số liệu mining:**
     - **28.02%** câu trả lời (3.781 / 13.494 lượt chat) hoàn toàn mất nguồn trích dẫn (`citations = []`).
