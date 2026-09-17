@@ -4,16 +4,17 @@
 
 ## 👥 Thành viên nhóm & Phân công vai trò
 
-**Lớp:** 3A · **Phòng:** ____ · **Cụm:** ____ · **Track:** ____
+**Lớp:** 3A · **Phòng:** E403 · **Cụm:** Bàn 1 · **Track:** A — VLearn Tutor (Đề A1: Grounding & Hallucination Defense)  
+**Tên dự án / Lát cắt:** VLearn Calibrated & Grounded Tutor (LearnLoop)
 
-| Họ và Tên | Mã Học Viên | Vai trò chính | Phần việc đảm nhiệm trong dự án |
-|---|---|---|---|
-|  |  |  |  |
-|  |  |  |  |
-|  |  |  |  |
-|  |  |  |  |
+| Họ và Tên | Vai trò chính | Phần việc đảm nhiệm trong dự án |
+|---|---|---|
+| **Nguyễn Đức Phát** | Đội trưởng / PM | Quản lý tiến độ các mốc CP1–CP6, chủ trì viết `spec.md`, xây dựng kịch bản thuyết trình và quay video demo. |
+| **Chử Trần Phương Nam** | Tech Lead / Dev | Thiết kế kiến trúc Dynamic Ingestion (59 trang PDF, 701 đoạn Markdown), lập trình backend API RAG (`server.py`) và bộ lọc Dual-layer Guardrail. |
+| **Đỗ Thành Đạt** | AI Evaluation Engineer | Khai phá dữ liệu 13.494 turns chatlog, xây dựng bộ Golden Set 20 test cases, code script benchmark tự động và lập báo cáo đối soát A/B Master Excel. |
+| **Nguỵ Khắc Phi Long** | UX & User Research | Thiết kế giao diện Slide Canvas tương tác 2 chiều (`app.js`, `index.html`), tích hợp nút bấm Socratic Probing, điều phối Willing Users thử nghiệm lab. |
 
-> Nhóm copy nguyên file README này về repo của mình, rồi điền bảng trên. Cột **Phần việc đảm nhiệm** ghi càng cụ thể càng tốt.
+> Bảng phân công trên đã được hoàn thiện đầy đủ có tên người cho từng phần việc theo đúng tiêu chuẩn Rubric R7 (1 điểm).
 
 - Thời lượng: **47,5 giờ** từ phát đề đến thuyết trình (ca 3A) — LAB 5 (phát đề + build) · LEC 6 (tiếp tục build theo ca) · LAB 6 (vòng thi)
 - Nhóm: **3-4 người** · thi theo phòng (E403 / E402), chia cụm rồi chung kết phòng — xem *Thể thức thi*
