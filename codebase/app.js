@@ -1,0 +1,674 @@
+let activeSlide = 'd1';
+  let currentSelection = "";
+  let lastProcessedSelection = "";
+  let sessionHistoryQueries = [];
+  const preview = document.getElementById('selection-preview');
+  const toast = document.getElementById('auto-toast');
+
+  // GROUNDED CONTEXT FROM DATA PACK (TRANSCRIPTS & SLIDES)
+  const SLIDE_KNOWLEDGE = {
+    d1: {
+      page: "Trang 8",
+      title: "2017: Transformer & Cơ chế Tự chú ý",
+      slide_text: "Transformer là bước ngoặt vì nó cho mô hình hiểu ngôn ngữ theo cách linh hoạt hơn: mỗi từ có thể nhìn sang những từ quan trọng khác trong cả câu nhờ cơ chế Attention, thay vì chỉ đi tuần tự từng bước → trở thành nền móng kỹ thuật cho GPT, BERT và toàn bộ làn sóng LLM sau đó.",
+      transcript: "[T04-038] [T04-040] Giảng viên giải thích: Transformer ra đời từ bài báo Attention Is All You Need năm 2017. Thay vì lần lượt đọc và dịch tuần tự từng chữ một như RNN/LSTM gây nghẽn cổ chai, nó đọc cả cụm và dùng cơ chế Attention nhận diện các từ có liên quan trực tiếp đến nhau cùng một lúc trên GPU."
+    },
+    d4: {
+      page: "Trang 55",
+      title: "Kỹ thuật Delimiters & Cô Lập Dữ Liệu Input",
+      slide_text: "Bao bọc mọi dữ liệu từ User, API responses, hoặc DB queries vào trong các thẻ định danh rõ ràng. Chỉ thị mô hình: Chỉ xử lý văn bản nằm trong thẻ. Tính nhất quán: Duy trì đồng nhất một loại thẻ phân tách xuyên suốt toàn bộ prompt.",
+      transcript: "Giảng viên nhấn mạnh: Delimiters (cặp thẻ XML như <user_query>) là kỹ thuật phòng vệ lớp 1 để chống Prompt Injection và Context Bleed. Nó giúp model tách bạch rõ ràng giữa chỉ thị hệ thống (Instruction) và dữ liệu thô của người dùng (Data), tăng độ ổn định hành vi của Agent."
+    }
+  };
+
+  // SYSTEM PROMPT CHO AI THẬT
+  function buildSystemPrompt(slideKey) {
+    const k = SLIDE_KNOWLEDGE[slideKey];
+    return `Bạn là VLearn AI Tutor thông minh của VinUni.
+Nhiệm vụ: Giải thích đoạn văn bản học viên vừa bôi đen trên slide bài giảng theo nguyên lý Progressive Disclosure (Google PAIR & HAX).
+
+BẮT BUỘC TUÂN THỦ CÁC QUY TẮC SAU:
+1. Dựa DUY NHẤT vào dữ liệu bài giảng được cung cấp dưới đây. Tuyệt đối không bịa đặt số trang hoặc thông tin ngoài bài.
+2. TẦNG 1 (Micro-summary): Trả lời súc tích trong TỐI ĐA 2 CÂU (dưới 250 ký tự), nêu bật bản chất cốt lõi. Gắn thẻ trích dẫn [${k.page}].
+3. TẦNG 2 (Socratic Probing): Đưa ra đúng 2 câu hỏi gợi mở tiếp theo để học sinh đào sâu.
+4. NẾU HỌC VIÊN HỎI NGOÀI BÀI (như thuật toán PPO/RLHF, thời tiết, code gian lận): Lịch sự từ chối và hướng dẫn quay lại bài học hiện tại.
+
+DỮ LIỆU NỀN TẢNG (GROUNDING):
+- Slide: [${k.page}] ${k.title}
+- Nội dung Slide: ${k.slide_text}
+- Lời giảng Thầy cô (Transcript): ${k.transcript}
+
+ĐỊNH DẠNG ĐẦU RA (Bắt buộc trả về đúng định dạng JSON không bọc thêm giải thích ngoài):
+{
+  "summary": "Tối đa 2 câu súc tích tóm tắt cho học viên...",
+  "citation": "[${k.page}]",
+  "option_a": "Câu hỏi đào sâu A...",
+  "option_b": "Câu hỏi đào sâu B...",
+  "is_out_of_scope": false
+}`;
+  }
+
+  // KHỞI TẠO CẤU HÌNH API TỪ LOCALSTORAGE
+  function initApiConfig() {
+    const savedProvider = localStorage.getItem('vlearn_ai_provider') || 'mock';
+    const savedKey = localStorage.getItem('vlearn_ai_key') || '';
+    
+    document.getElementById('api-provider').value = savedProvider;
+    document.getElementById('api-key').value = savedKey;
+    updateBadge(savedProvider, savedKey);
+    toggleProviderHelp();
+  }
+
+  function updateBadge(provider, key) {
+    const badge = document.getElementById('engine-badge');
+    const dot = document.getElementById('engine-dot');
+    const label = document.getElementById('engine-label');
+
+    if (provider === 'gemini' && key) {
+      label.innerText = 'AI ENGINE: GEMINI 1.5 FLASH (LIVE API)';
+      badge.style.background = 'rgba(16, 185, 129, 0.15)';
+      dot.style.background = '#34d399';
+    } else if (provider === 'openai' && key) {
+      label.innerText = 'AI ENGINE: OPENAI GPT-4O-MINI (LIVE API)';
+      badge.style.background = 'rgba(16, 185, 129, 0.15)';
+      dot.style.background = '#34d399';
+    } else {
+      label.innerText = 'AI ENGINE: GROUNDED SIMULATOR';
+      badge.style.background = 'rgba(56, 189, 248, 0.15)';
+      dot.style.background = '#38bdf8';
+    }
+  }
+
+  function openConfigModal() { document.getElementById('config-modal').style.display = 'flex'; }
+  function closeConfigModal() { document.getElementById('config-modal').style.display = 'none'; }
+
+  function toggleProviderHelp() {
+    const p = document.getElementById('api-provider').value;
+    const kg = document.getElementById('key-group');
+    const kl = document.getElementById('key-label');
+    const kh = document.getElementById('key-help');
+
+    if (p === 'mock') {
+      kg.style.display = 'none';
+    } else {
+      kg.style.display = 'block';
+      if (p === 'gemini') {
+        kl.innerText = 'Google Gemini API Key:';
+        kh.innerHTML = 'Lấy key miễn phí tại: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--accent);">aistudio.google.com</a>';
+      } else {
+        kl.innerText = 'OpenAI API Key:';
+        kh.innerHTML = 'Lấy key tại: <a href="https://platform.openai.com/api-keys" target="_blank" style="color: var(--accent);">platform.openai.com</a>';
+      }
+    }
+  }
+
+  function saveApiKey() {
+    const p = document.getElementById('api-provider').value;
+    const k = document.getElementById('api-key').value.trim();
+    localStorage.setItem('vlearn_ai_provider', p);
+    localStorage.setItem('vlearn_ai_key', k);
+    updateBadge(p, k);
+    closeConfigModal();
+    showToast(`✅ Đã lưu cấu hình: ${p.toUpperCase()}`);
+  }
+
+  function switchSlide(slideId) {
+    activeSlide = slideId;
+    sessionHistoryQueries = [];
+    document.getElementById('slide-canvas-d1').style.display = slideId === 'd1' ? 'block' : 'none';
+    document.getElementById('slide-canvas-d4').style.display = slideId === 'd4' ? 'block' : 'none';
+    document.getElementById('tab-d1').className = 'slide-tab-btn' + (slideId === 'd1' ? ' active' : '');
+    document.getElementById('tab-d4').className = 'slide-tab-btn' + (slideId === 'd4' ? ' active' : '');
+    
+    document.getElementById('header-course-title').innerText = slideId === 'd1' 
+      ? 'AI In Action · Day 01: AI & LLM Foundation'
+      : 'AI In Action · Day 04: Prompt Engineering & Tool Calling';
+    
+    lastProcessedSelection = "";
+    showToast(`Đã chuyển sang ${SLIDE_KNOWLEDGE[slideId].page}`);
+  }
+
+  function showToast(msg) {
+    toast.innerText = msg;
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 1500);
+  }
+
+  // TỰ ĐỘNG TRA CỨU KHI BÔI ĐEN & THẢ CHUỘT (CHỐNG LỖI VÙNG CHỌN)
+  document.addEventListener('mouseup', function(e) {
+    setTimeout(() => {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+      const selectedText = selection.toString().trim();
+
+      const slideContainer = document.querySelector('.slide-container');
+      const isInside = slideContainer && selection.anchorNode && 
+        (slideContainer.contains(selection.anchorNode) || slideContainer.contains(selection.anchorNode.parentNode));
+
+      if (selectedText.length >= 1 && isInside) {
+        if (selectedText === lastProcessedSelection) return;
+        lastProcessedSelection = selectedText;
+        currentSelection = selectedText;
+        if (preview) {
+          preview.innerText = `"${selectedText}" (${selectedText.length} ký tự)`;
+        }
+
+        const cleaned = selectedText.replace(/[\s\-_–—>><=.,:;!?()[\]{}]+/g, '');
+        if (selectedText.length < 3 || cleaned.length < 2) {
+          showToast(`⚠️ Cụm từ "${selectedText}" không hợp lệ`);
+        } else {
+          showToast(`⚡ Nhận diện: "${selectedText.substring(0, 22)}..."`);
+        }
+        processSelectionWithAI(selectedText);
+      }
+    }, 100);
+  });
+
+  function autoSelectText(text, slideId) {
+    if (activeSlide !== slideId) switchSlide(slideId);
+    lastProcessedSelection = text;
+    currentSelection = text;
+    preview.innerText = `"${text}" (${text.length} ký tự)`;
+    processSelectionWithAI(text);
+  }
+
+  // GỌI AI THẬT QUA SERVER BACKEND (HOẶC FALLBACK SIMULATOR)
+  async function processSelectionWithAI(userText, skipAddUserMsg = false) {
+    const k = SLIDE_KNOWLEDGE[activeSlide];
+    if (!skipAddUserMsg) {
+      addMessage('user', `(${k.page}, bôi đen: "${userText}")`);
+    }
+
+    // Client Guardrail: Quá ngắn (< 3 ký tự) hoặc chỉ chứa ký tự đặc biệt / mũi tên / dấu chấm phẩy
+    const cleanedText = userText.replace(/[\s\-_–—>><=.,:;!?()[\]{}]+/g, '');
+    if (userText.length < 3 || cleanedText.length < 2) {
+      setDecision('Bôi đen không hợp lệ / quá ngắn', 'filter_garbage', 'active', '[Cần bôi đen lại]');
+      addMessage('ai', `Đoạn văn bản "${userText}" quá ngắn hoặc không phải là một cụm từ hoàn chỉnh. Bạn hãy bôi đen trọn vẹn một khái niệm (ví dụ: "Transformer", "Attention") để AI giải thích nhé!`, false, null);
+      return;
+    }
+
+    const startTime = performance.now();
+    setDecision('Gọi AI Engine', 'Model: GPT-4O-MINI (LIVE API)', 'active');
+
+    try {
+      // 1. Thử gọi backend /api/ask với OpenAI API Key từ file .env
+      const resp = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: userText,
+          slide: activeSlide,
+          history_queries: sessionHistoryQueries
+        })
+      });
+
+      if (resp.ok) {
+        const res = await resp.json();
+        const latency = res.latency_ms || Math.round(performance.now() - startTime);
+        document.getElementById('latency-display').innerText = `Latency: ${latency} ms (OpenAI Live API)`;
+        document.getElementById('latency-display').style.color = '#34d399';
+        renderAiResponse(res, userText);
+        return;
+      }
+    } catch (err) {
+      console.warn('Backend API chưa sẵn sàng, dùng Fallback Grounded:', err);
+    }
+
+    // 2. Grounded Fallback nếu mất kết nối
+    setTimeout(() => {
+      const latency = Math.round(performance.now() - startTime);
+      document.getElementById('latency-display').innerText = `Latency: ${latency} ms (Grounded Simulator)`;
+      const mockResult = generateGroundedMock(userText, activeSlide);
+      renderAiResponse(mockResult, userText);
+    }, 350);
+  }
+
+  // CALL GOOGLE GEMINI 1.5 FLASH
+  async function callGeminiAPI(key, text) {
+    const sysPrompt = buildSystemPrompt(activeSlide);
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+    const payload = {
+      contents: [
+        { role: "user", parts: [{ text: `${sysPrompt}
+
+ĐOẠN HỌC VIÊN BÔI ĐEN: "${text}"` }] }
+      ],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 600 }
+    };
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    const rawText = data.candidates[0].content.parts[0].text;
+    return parseAIResponse(rawText, text);
+  }
+
+  // CALL OPENAI GPT-4O-MINI
+  async function callOpenAIAPI(key, text) {
+    const sysPrompt = buildSystemPrompt(activeSlide);
+    const url = 'https://api.openai.com/v1/chat/completions';
+    const payload = {
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: sysPrompt },
+        { role: "user", content: `Đoạn học viên bôi đen: "${text}"` }
+      ],
+      temperature: 0.2,
+      max_tokens: 400
+    };
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    const rawText = data.choices[0].message.content;
+    return parseAIResponse(rawText, text);
+  }
+
+  function parseAIResponse(raw, fallbackConcept) {
+    try {
+      const clean = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+      return JSON.parse(clean);
+    } catch (e) {
+      return {
+        summary: raw.substring(0, 240) + '...',
+        citation: `[${SLIDE_KNOWLEDGE[activeSlide].page}]`,
+        option_a: `Tìm hiểu sâu hơn về ${fallbackConcept}`,
+        option_b: `Xem ví dụ thực tế liên quan`,
+        is_out_of_scope: false
+      };
+    }
+  }
+
+  // MOCK GROUNDED RESPONSES DỰA TRÊN TRANSCRIPT THẬT
+  function generateGroundedMock(text, slideId) {
+    const lower = text.toLowerCase();
+    const k = SLIDE_KNOWLEDGE[slideId];
+
+    // Case Guardrail: PPO / RLHF
+    if (lower.includes('ppo') || lower.includes('rlhf')) {
+      return {
+        summary: "Khái niệm PPO (Proximal Policy Optimization) thuộc bài học RLHF chuyên sâu, không nằm trong nội dung Day 01. VLearn AI Tutor chỉ hỗ trợ các khái niệm thuộc bài học hiện tại để bạn tránh bị quá tải thông tin.",
+        citation: null,
+        option_a: "Xem lại mục tiêu chính của bài học Day 01",
+        option_b: "Khái niệm Transformer hoạt động như thế nào?",
+        is_out_of_scope: true
+      };
+    }
+
+    // Day 04: Delimiters
+    if (slideId === 'd4') {
+      if (lower.includes('bao bọc') || lower.includes('user_query')) {
+        return {
+          summary: "Bao bọc input bằng thẻ Delimiters (như <user_query>) giúp mô hình phân biệt rõ ràng giữa chỉ thị của hệ thống và dữ liệu thô, từ đó ngăn chặn hiệu quả tấn công Prompt Injection [Trang 55].",
+          citation: "[Trang 55]",
+          option_a: "A. Thẻ XML phân tách dữ liệu khác gì so với dùng dấu ngoặc kép '''?",
+          option_b: "B. Ví dụ một prompt bị Context Bleed khi không dùng delimiters",
+          is_out_of_scope: false
+        };
+      } else if (lower.includes('nhất quán')) {
+        return {
+          summary: "Tính nhất quán đòi hỏi bạn duy trì đồng nhất một loại thẻ phân tách xuyên suốt các lượt prompt để mô hình hình thành khuôn mẫu xử lý ổn định, không bị bối rối [Trang 55].",
+          citation: "[Trang 55]",
+          option_a: "A. Tại sao thay đổi định dạng delimiter giữa các lượt lại làm giảm độ chính xác?",
+          option_b: "B. Quy ước chuẩn đặt tên thẻ XML trong production agent",
+          is_out_of_scope: false
+        };
+      } else if (lower.includes('harness') || lower.includes('loop')) {
+        return {
+          summary: "Khái niệm Harness (khung bảo vệ) là hạ tầng quản lý vòng lặp giữa Agent và Tool để kiểm soát trạng thái an toàn, bám sát cấu trúc bài học hiện tại [Trang 55].",
+          citation: "[Trang 55]",
+          option_a: "A. Vòng lặp Agent tương tác với Tool hoạt động ra sao?",
+          option_b: "B. Cách kiểm soát tràn bộ nhớ khi chạy tool loop",
+          is_out_of_scope: false
+        };
+      }
+    }
+
+    // Day 01: Transformer
+    if (lower.includes('transformer')) {
+      return {
+        summary: "Transformer (2017) là kiến trúc nền tảng cho các LLM hiện đại, loại bỏ sự tuần tự của RNN để xử lý song song toàn bộ chuỗi từ [Trang 8].",
+        citation: "[Trang 8]",
+        option_a: "A. Cơ chế Attention tính trọng số như thế nào?",
+        option_b: "B. So sánh Transformer với RNN/LSTM",
+        is_out_of_scope: false
+      };
+    }
+
+    return {
+      summary: `Khái niệm "${text}" được neo trực tiếp tại ${k.page} của bài giảng.`,
+      citation: `[${k.page}]`,
+      option_a: `A. Tìm hiểu thêm về "${text}"`,
+      option_b: `B. Ví dụ minh họa thực tế`,
+      is_out_of_scope: false
+    };
+  }
+
+  // RENDER PHẢN HỒI LÊN GIAO DIỆN
+  function renderAiResponse(res, concept) {
+    if (res.is_out_of_scope) {
+      setDecision('Ngoài phạm vi bài học', 'Từ chối & Điều hướng', 'active', '[Ngoài bài]');
+      addMessage('ai', res.summary, false, null);
+      return;
+    }
+
+    setDecision('Tầng 1: Tóm tắt vi mô', 'Tầng 2: Gợi mở Socratic', 'active');
+    
+    const options = [];
+    if (res.option_a) options.push({ label: res.option_a });
+    if (res.option_b) options.push({ label: res.option_b });
+
+    const displayConcept = res.next_concept || concept;
+    addMessage('ai', res.summary, true, res.citation, {
+      concept: displayConcept,
+      options: options
+    });
+  }
+
+  function escapeXmlTags(str) {
+    if (!str) return "";
+    return str
+      .replace(/<user_query>/gi, '&lt;user_query&gt;')
+      .replace(/<\/user_query>/gi, '&lt;/user_query&gt;')
+      .replace(/<instruction>/gi, '&lt;instruction&gt;')
+      .replace(/<\/instruction>/gi, '&lt;/instruction&gt;')
+      .replace(/<context>/gi, '&lt;context&gt;')
+      .replace(/<\/context>/gi, '&lt;/context&gt;');
+  }
+
+  function formatConceptTitle(raw) {
+    if (!raw) return "khái niệm này";
+    let c = raw.trim().replace(/^["'“”‘’]|["'“”‘’]$/g, '');
+    c = c.replace(/[.,:;!?]+$/g, '').trim();
+    if (c.length > 38) {
+      c = c.substring(0, 35) + '...';
+    }
+    return c;
+  }
+
+  function addMessage(sender, text, isProgressive = false, citation = null, deepDiveData = null) {
+    const chatBox = document.getElementById('chat-box') || document.getElementById('chat-messages');
+    if (!chatBox) return;
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `msg msg-${sender}` + (isProgressive ? ' progressive-msg' : '');
+
+    const label = document.createElement('div');
+    label.className = 'msg-label';
+    label.innerText = sender === 'user' ? 'BẠN' : (isProgressive ? 'AI TUTOR · PROGRESSIVE DISCLOSURE' : 'AI TUTOR · RESPONSE');
+    msgDiv.appendChild(label);
+
+    const bubble = document.createElement('div');
+    // Xóa triệt để mọi thẻ trích dẫn vô tình lọt vào nội dung văn bản (kể cả nested brackets [Transcript [...]...])
+    let cleanText = escapeXmlTags(text);
+    cleanText = cleanText.replace(/\[(?:Trang|Transcript|Slide|T\d+|d\d+)[^\]]*(\[[^\]]*\])?[^\]]*\]/gi, '');
+    cleanText = cleanText.replace(/\s*\[.*?\]\s*$/g, '').trim();
+    bubble.innerHTML = cleanText;
+
+    if (citation) {
+      const citeTag = document.createElement('div');
+      citeTag.className = 'citation-tag';
+      citeTag.innerHTML = `📄 <strong>Nguồn xác minh:</strong> ${escapeXmlTags(citation)}`;
+      bubble.appendChild(citeTag);
+    }
+
+    // TẦNG 2: PROGRESSIVE BOX + CUSTOM QUESTION INPUT (HAX G9 & SOCRATIC PROBING)
+    if (deepDiveData) {
+      const displayConcept = formatConceptTitle(deepDiveData.concept);
+      const box = document.createElement('div');
+      box.className = 'progressive-box';
+
+      const title = document.createElement('div');
+      title.className = 'progressive-title';
+      title.innerHTML = `💡 Đào sâu tiếp về <em>"${displayConcept}"</em>:`;
+      box.appendChild(title);
+
+      const optContainer = document.createElement('div');
+      optContainer.className = 'quick-options';
+      deepDiveData.options.forEach(opt => {
+        if (!opt.label) return;
+        const btn = document.createElement('button');
+        btn.className = 'quick-btn';
+        btn.innerText = opt.label;
+        btn.onclick = async () => {
+          sessionHistoryQueries.push(opt.label);
+          addMessage('user', opt.label);
+          setDecision('Đào sâu gợi ý', 'Gọi GPT-4o-mini (Live API)', 'active');
+          const startTime = performance.now();
+          try {
+            const resp = await fetch('/api/ask', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: displayConcept,
+                custom_query: opt.label,
+                slide: activeSlide,
+                history_queries: sessionHistoryQueries
+              })
+            });
+            if (resp.ok) {
+              const data = await resp.json();
+              const latency = data.latency_ms || Math.round(performance.now() - startTime);
+              document.getElementById('latency-display').innerText = `Latency: ${latency} ms (OpenAI Live)`;
+              document.getElementById('latency-display').style.color = '#34d399';
+              setDecision('Đào sâu gợi ý', data.is_out_of_scope ? 'Ngoài phạm vi bài học' : 'Hoàn tất trả lời', 'active', data.citation ? null : '[Ngoài bài]');
+
+              // YÊU CẦU 3: ĐÀO SÂU LIÊN TỤC (MULTI-TURN SOCRATIC PROBING)
+              let nextDeepDive = null;
+              if (!data.is_out_of_scope && (data.option_a || data.option_b)) {
+                const nextOptions = [];
+                if (data.option_a) nextOptions.push({ label: data.option_a });
+                if (data.option_b) nextOptions.push({ label: data.option_b });
+                if (nextOptions.length > 0) {
+                  nextDeepDive = {
+                    concept: data.next_concept || opt.label,
+                    options: nextOptions
+                  };
+                }
+              }
+
+              addMessage('ai', data.summary, true, data.citation || null, nextDeepDive);
+              return;
+            }
+          } catch (err) {
+            console.warn('Lỗi gọi API khi bấm option:', err);
+          }
+          if (typeof opt.action === 'function') {
+            opt.action();
+          }
+        };
+        optContainer.appendChild(btn);
+      });
+      box.appendChild(optContainer);
+
+      // Ô NHẬP CÂU HỎI TÙY CHỌN
+      const customWrap = document.createElement('custom-wrap');
+      customWrap.className = 'custom-question-wrap';
+
+      const customInput = document.createElement('input');
+      customInput.type = 'text';
+      customInput.className = 'custom-question-input';
+      customInput.placeholder = `Hoặc gõ câu hỏi riêng về "${displayConcept}"...`;
+      
+      const customBtn = document.createElement('button');
+      customBtn.className = 'custom-send-btn';
+      customBtn.innerText = 'Hỏi ➔';
+
+      const triggerCustomAsk = async () => {
+        const query = customInput.value.trim();
+        if (!query) return;
+        sessionHistoryQueries.push(query);
+        addMessage('user', `[Hỏi về "${displayConcept}"]: ${query}`);
+        customInput.value = '';
+        
+        const startTime = performance.now();
+        setDecision('Hỏi đáp tùy chỉnh', 'Gọi GPT-4o-mini (Live API)', 'active');
+
+        try {
+          const resp = await fetch('/api/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: displayConcept,
+              custom_query: query,
+              slide: activeSlide,
+              history_queries: sessionHistoryQueries
+            })
+          });
+
+          if (resp.ok) {
+            const data = await resp.json();
+            const latency = data.latency_ms || Math.round(performance.now() - startTime);
+            document.getElementById('latency-display').innerText = `Latency: ${latency} ms (OpenAI Live)`;
+            document.getElementById('latency-display').style.color = '#34d399';
+            setDecision('Hỏi đáp tùy chỉnh', data.is_out_of_scope ? 'Ngoài phạm vi bài học' : 'Hoàn tất trả lời', 'active', data.citation ? null : '[Ngoài bài]');
+
+            // YÊU CẦU 3: ĐÀO SÂU LIÊN TỤC CHO CÂU HỎI TÙY CHỈNH
+            let nextDeepDive = null;
+            if (!data.is_out_of_scope && (data.option_a || data.option_b)) {
+              const nextOptions = [];
+              if (data.option_a) nextOptions.push({ label: data.option_a });
+              if (data.option_b) nextOptions.push({ label: data.option_b });
+              if (nextOptions.length > 0) {
+                nextDeepDive = {
+                  concept: data.next_concept || query,
+                  options: nextOptions
+                };
+              }
+            }
+
+            addMessage('ai', data.summary, true, data.citation || null, nextDeepDive);
+            return;
+          }
+        } catch (err) {
+          console.warn('Lỗi gọi Custom Ask API, dùng fallback:', err);
+        }
+
+        // Fallback Grounded nếu mất mạng
+        setTimeout(() => {
+          setDecision('Hỏi đáp tùy chỉnh', 'Hoàn tất trả lời', 'active');
+          addMessage('ai', `Về <em>"${query}"</em>: Dựa trên tài liệu bài giảng, câu hỏi này nằm ngoài nội dung đang hiển thị.`, false, null);
+        }, 300);
+      };
+
+      customInput.onkeydown = (e) => { if (e.key === 'Enter') triggerCustomAsk(); };
+      customBtn.onclick = triggerCustomAsk;
+
+      customWrap.appendChild(customInput);
+      customWrap.appendChild(customBtn);
+      box.appendChild(customWrap);
+
+      bubble.appendChild(box);
+    }
+
+    msgDiv.appendChild(bubble);
+    chatBox.appendChild(msgDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function setDecision(step1, step2, styleClass, step3 = null) {
+    const s1 = document.getElementById('step-detector');
+    const s2 = document.getElementById('step-move');
+    const s3 = document.getElementById('step-ground');
+
+    s1.className = `decision-step ${styleClass}`;
+    s1.innerText = `1. ${step1}`;
+
+    s2.className = `decision-step ${styleClass}`;
+    s2.innerText = `2. ${step2}`;
+
+    s3.className = 'decision-step active';
+    s3.innerText = step3 ? `3. ${step3}` : `3. [${SLIDE_KNOWLEDGE[activeSlide].page}]`;
+  }
+
+  async function sendCustomMessage() {
+    const input = document.getElementById('user-input');
+    const val = input.value.trim();
+    if (!val) return;
+    input.value = '';
+
+    addMessage('user', val);
+
+    // Client Guardrail: Kiểm tra câu hỏi tự do quá ngắn hoặc chỉ chứa ký tự rác/mũi tên
+    const cleanedVal = val.replace(/[\s\-_–—>><=.,:;!?()[\]{}]+/g, '');
+    if (val.length < 3 || cleanedVal.length < 2) {
+      setDecision('Câu hỏi không hợp lệ', 'filter_garbage', 'active', '[Cần gõ rõ câu hỏi]');
+      addMessage('ai', `Nội dung "${val}" quá ngắn hoặc không phải là một câu hỏi/thuật ngữ hoàn chỉnh. Bạn hãy đặt một câu hỏi rõ ràng (ví dụ: "Tại sao Attention xử lý song song được?") để AI giải thích nhé!`, false, null);
+      return;
+    }
+
+    sessionHistoryQueries.push(val);
+    const startTime = performance.now();
+    setDecision('Câu hỏi tự do', 'Gọi GPT-4o-mini (Live API)', 'active');
+
+    try {
+      const resp = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: SLIDE_KNOWLEDGE[activeSlide].title,
+          custom_query: val,
+          slide: activeSlide,
+          history_queries: sessionHistoryQueries
+        })
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const latency = data.latency_ms || Math.round(performance.now() - startTime);
+        document.getElementById('latency-display').innerText = `Latency: ${latency} ms (OpenAI Live)`;
+        document.getElementById('latency-display').style.color = '#34d399';
+        setDecision('Câu hỏi tự do', data.is_out_of_scope ? 'Ngoài phạm vi bài học' : 'Hoàn tất trả lời', 'active', data.citation ? null : '[Ngoài bài]');
+
+        let nextDeepDive = null;
+        if (!data.is_out_of_scope && (data.option_a || data.option_b)) {
+          const nextOptions = [];
+          if (data.option_a) nextOptions.push({ label: data.option_a });
+          if (data.option_b) nextOptions.push({ label: data.option_b });
+          if (nextOptions.length > 0) {
+            nextDeepDive = {
+              concept: data.next_concept || val,
+              options: nextOptions
+            };
+          }
+        }
+
+        addMessage('ai', data.summary, true, data.citation || null, nextDeepDive);
+        return;
+      }
+    } catch (err) {
+      console.warn('Lỗi gửi chat tự do:', err);
+    }
+
+    processSelectionWithAI(val);
+  }
+
+  // Tự động kiểm tra trạng thái Backend khi load trang
+  async function checkServerStatus() {
+    try {
+      const r = await fetch('/api/status');
+      if (r.ok) {
+        const d = await r.json();
+        if (d.active) {
+          const badge = document.getElementById('engine-badge');
+          const dot = document.getElementById('engine-dot');
+          const label = document.getElementById('engine-label');
+          label.innerText = `AI ENGINE: OPENAI ${d.model.toUpperCase()} (LIVE .ENV)`;
+          badge.style.background = 'rgba(16, 185, 129, 0.2)';
+          badge.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+          dot.style.background = '#34d399';
+          document.getElementById('latency-display').innerText = 'Backend: SẴN SÀNG (OPENAI)';
+          return;
+        }
+      }
+    } catch (e) {}
+    initApiConfig();
+  }
+
+  // Khởi chạy khi load trang
+  window.addEventListener('DOMContentLoaded', checkServerStatus);

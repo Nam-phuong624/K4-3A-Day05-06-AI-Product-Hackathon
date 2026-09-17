@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VLearn AI Tutor · Live Demo CP3 (Progressive Disclosure & Grounded AI)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-area">
+    <div class="logo-badge">VLearn Tutor</div>
+    <div class="course-title" id="header-course-title">AI In Action · Day 01: AI & LLM Foundation</div>
+  </div>
+  <div class="header-actions">
+    <div class="ai-engine-badge" id="engine-badge">
+      <div class="engine-dot" id="engine-dot"></div>
+      <span id="engine-label">AI ENGINE: GROUNDED SIMULATOR</span>
+    </div>
+    <button class="btn-config" onclick="openConfigModal()">⚙️ Cấu hình API AI Thật</button>
+  </div>
+</header>
+
+<!-- WORKSPACE -->
+<div class="workspace">
+
+  <!-- LEFT: SLIDE VIEWER -->
+  <div class="slide-container">
+    <div class="slide-toolbar">
+      <div class="slide-tabs">
+        <button class="slide-tab-btn active" id="tab-d1" onclick="switchSlide('d1')">Day 01 · Trang 8 (Transformer)</button>
+        <button class="slide-tab-btn" id="tab-d4" onclick="switchSlide('d4')">Day 04 · Trang 55 (Delimiters)</button>
+      </div>
+      <span style="color: var(--accent); font-weight: 600; font-size: 11px;">✨ Bôi đen chữ & THẢ CHUỘT để AI giải thích ngay</span>
+    </div>
+    
+    <div class="slide-content-wrap">
+      
+      <!-- SLIDE DAY 01 -->
+      <div class="slide-canvas" id="slide-canvas-d1">
+        <div class="slide-num">[Trang 8]</div>
+        <h1 class="slide-h1">2017: Transformer & Cơ chế Tự chú ý</h1>
+        
+        <p class="slide-p">
+          Trước năm 2017, các mô hình xử lý ngôn ngữ truyền thống như RNN hoặc LSTM xử lý dữ liệu theo chuỗi tuần tự từng từ một, dẫn đến hiện tượng nghẽn cổ chai và khó huấn luyện song song.
+        </p>
+
+        <p class="slide-p">
+          <strong>Transformer</strong> là bước ngoặt vì nó cho mô hình hiểu ngôn ngữ theo cách linh hoạt hơn: mỗi từ có thể nhìn sang những từ quan trọng khác trong cả câu nhờ cơ chế <strong>Attention</strong> (Tự chú ý), thay vì chỉ đi tuần tự từng bước.
+        </p>
+
+        <p class="slide-p">
+          Cơ chế này trở thành nền móng kỹ thuật cốt lõi cho GPT, BERT và toàn bộ làn sóng LLM hiện đại.
+        </p>
+
+        <p class="slide-p" style="color: #64748b; font-size: 12.5px; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+          <em>* Lưu ý: Thuật toán PPO (Proximal Policy Optimization) thuộc bài học RLHF chuyên sâu, không có trong nội dung bài học Day 1 này.</em>
+        </p>
+
+        <div class="slide-actions">
+          <div class="slide-actions-title">Bấm nhanh kịch bản kiểm thử (CP3 Demo):</div>
+          <div class="action-btns">
+            <button class="scenario-btn" onclick="autoSelectText('Transformer', 'd1')">1. Bôi đen "Transformer" (Khái niệm)</button>
+            <button class="scenario-btn" onclick="autoSelectText('mỗi từ có thể nhìn sang những từ quan trọng khác trong cả câu', 'd1')">2. Bôi đen câu dài (Cụ thể)</button>
+            <button class="scenario-btn" onclick="autoSelectText('Thuật toán PPO (Proximal Policy Optimization)', 'd1')">3. Bôi đen "PPO" (Guardrail ngoài bài)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE DAY 04 -->
+      <div class="slide-canvas" id="slide-canvas-d4" style="display: none;">
+        <div class="slide-num">[Trang 55]</div>
+        <h1 class="slide-h1">Kỹ thuật Delimiters & Cô Lập Dữ Liệu Input</h1>
+        
+        <p class="slide-p">
+          Khi xây dựng Agent trong production, lỗi phổ biến nhất là để dữ liệu đầu vào trộn lẫn trực tiếp với chỉ dẫn của hệ thống, gây ra rủi ro Prompt Injection và Context Bleed.
+        </p>
+
+        <div class="slide-code-box">
+&lt;instruction&gt;Chỉ xử lý văn bản nằm trong thẻ &lt;user_query&gt;&lt;/instruction&gt;
+&lt;user_query&gt;Bao bọc mọi dữ liệu từ User, API responses, hoặc DB queries&lt;/user_query&gt;
+        </div>
+
+        <p class="slide-p">
+          <strong>Bao bọc mọi dữ liệu từ User, API responses, hoặc DB queries</strong> vào trong các thẻ định danh rõ ràng giúp mô hình phân định ranh giới giữa lệnh thực thi và dữ liệu thô.
+        </p>
+
+        <p class="slide-p">
+          Nguyên tắc <strong>Tính nhất quán</strong>: Duy trì đồng nhất một loại thẻ phân tách xuyên suốt toàn bộ prompt để mô hình hình thành khuôn mẫu nhận diện ổn định.
+        </p>
+
+        <div class="slide-actions">
+          <div class="slide-actions-title">Bấm nhanh kịch bản kiểm thử (Khắc phục lỗi Chatbot cũ):</div>
+          <div class="action-btns">
+            <button class="scenario-btn" onclick="autoSelectText('Bao bọc mọi dữ liệu từ User, API responses, hoặc DB queries', 'd4')">1. Bôi đen "Bao bọc mọi dữ liệu" (TC01)</button>
+            <button class="scenario-btn" onclick="autoSelectText('Tính nhất quán', 'd4')">2. Bôi đen "Tính nhất quán" (TC03 - 3 từ)</button>
+            <button class="scenario-btn" onclick="autoSelectText('context loop harness', 'd4')">3. Bôi đen "context loop harness" (TC04 - Tránh bịa trang 1077)</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Floating Auto-Toast -->
+    <div id="auto-toast">⚡ Đã nhận diện bôi đen, AI Tutor đang phân tích...</div>
+  </div>
+
+  <!-- RIGHT: AI TUTOR PANEL -->
+  <div class="tutor-container">
+    <div class="tutor-header">
+      <div class="tutor-title">
+        <span>🤖 AI Tutor</span>
+        <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(Progressive Disclosure)</span>
+      </div>
+      <div style="font-size: 11px; color: var(--success); font-family: 'DM Mono', monospace;" id="latency-display">
+        Latency: -- ms
+      </div>
+    </div>
+
+    <!-- Active Selection Banner -->
+    <div class="selection-banner">
+      <span>Đoạn bôi đen:</span>
+      <span class="selection-text" id="selection-preview">Chưa chọn đoạn nào</span>
+    </div>
+
+    <!-- AI Decision Monitor (HAX G11) -->
+    <div class="decision-bar" id="decision-bar">
+      <span>Pipeline:</span>
+      <span class="decision-step" id="step-detector">1. Phân loại Input</span>
+      <span>→</span>
+      <span class="decision-step" id="step-move">2. Chọn nước đi</span>
+      <span>→</span>
+      <span class="decision-step" id="step-ground">3. Trích nguồn</span>
+    </div>
+
+    <!-- Chat Messages -->
+    <div class="chat-box" id="chat-box">
+      <div class="msg msg-ai">
+        <div class="msg-label">AI TUTOR · VLearn</div>
+        <div class="msg-bubble">
+          Chào bạn! Mình là AI Tutor thế hệ mới theo mô hình <strong>Progressive Disclosure</strong>. Bạn chỉ cần <strong>dùng chuột bôi đen từ/câu trên slide rồi thả tay</strong>: mình sẽ đưa ra tóm tắt cốt lõi trong 2 câu ngay lập tức, kèm các câu hỏi gợi mở để bạn chủ động đào sâu nhé!
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Box -->
+    <div class="tutor-footer">
+      <input type="text" class="chat-input" id="user-input" placeholder="Gõ câu hỏi riêng cho AI Tutor..." onkeydown="if(event.key==='Enter') sendCustomMessage()">
+      <button class="send-btn" onclick="sendCustomMessage()">Gửi</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- API CONFIG MODAL -->
+<div class="modal-overlay" id="config-modal">
+  <div class="modal-card">
+    <div class="modal-h2">
+      <span>⚙️ Cấu hình API AI Thật (CP3)</span>
+      <span class="modal-close" onclick="closeConfigModal()">✕</span>
+    </div>
+    <div class="modal-desc">
+      Nhập API key của bạn để hệ thống thực hiện <strong>lời gọi AI thật</strong> trực tiếp khi bôi đen trên slide. Key chỉ lưu tại <code>localStorage</code> trên trình duyệt của bạn, hoàn toàn bảo mật và không bị commit lên git.
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Chọn Nhà Cung Cấp AI:</label>
+      <select class="form-select" id="api-provider" onchange="toggleProviderHelp()">
+        <option value="gemini">Google Gemini (Khuyến nghị - Miễn phí 1500 req/ngày)</option>
+        <option value="openai">OpenAI (GPT-4o-mini)</option>
+        <option value="mock">Mô phỏng Grounded (Offline / Không cần Key)</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="key-group">
+      <label class="form-label" id="key-label">Google Gemini API Key:</label>
+      <input type="password" class="form-input" id="api-key" placeholder="Dán API Key vào đây (AIzaSy...)">
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;" id="key-help">
+        Lấy key miễn phí tại: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--accent);">aistudio.google.com</a>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-config" onclick="closeConfigModal()">Đóng</button>
+      <button class="btn-save" onclick="saveApiKey()">Lưu cấu hình</button>
+    </div>
+  </div>
+</div>
+
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VLearn AI Tutor - Prototype Mockup (CP2)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #0f172a;
+    --panel-bg: #1e293b;
+    --card-bg: #334155;
+    --border: #475569;
+    --accent: #38bdf8;
+    --accent-hover: #0ea5e9;
+    --accent-dim: rgba(56, 189, 248, 0.15);
+    --socratic-gold: #f59e0b;
+    --socratic-dim: rgba(245, 158, 11, 0.12);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --success: #10b981;
+    --warn: #ef4444;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Bôi đen text nổi bật */
+  ::selection {
+    background: #38bdf8 !important;
+    color: #0f172a !important;
+  }
+  ::-moz-selection {
+    background: #38bdf8 !important;
+    color: #0f172a !important;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-main);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: text !important;
+  }
+
+  /* Top Navigation */
+  header {
+    background: #090d16;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-badge {
+    background: linear-gradient(135deg, #0284c7, #38bdf8);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    letter-spacing: 1px;
+  }
+  .course-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+  .cp2-badge {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #34d399;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cp2-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: #34d399;
+  }
+
+  /* Main Workspace */
+  .workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    overflow: hidden;
+  }
+
+  /* Left: Slide Viewer */
+  .slide-container {
+    background: #131d31;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  .slide-toolbar {
+    background: #182338;
+    border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .slide-content-wrap {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .slide-canvas {
+    background: #fff;
+    color: #1e293b;
+    width: 100%;
+    max-width: 650px;
+    border-radius: 8px;
+    padding: 32px;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+    position: relative;
+    user-select: text !important;
+    cursor: text;
+  }
+  .slide-num {
+    position: absolute;
+    top: 14px; right: 18px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: #64748b;
+  }
+  .slide-h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 16px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 8px;
+    user-select: text !important;
+  }
+  .slide-p {
+    font-size: 14.5px;
+    line-height: 1.65;
+    margin-bottom: 16px;
+    color: #334155;
+    user-select: text !important;
+  }
+
+  /* Auto-lookup notification toast */
+  #auto-toast {
+    position: absolute;
+    top: 50px;
+    right: 20px;
+    background: #0284c7;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: none;
+    z-index: 100;
+    animation: fadeIn 0.2s ease-in;
+  }
+
+  .slide-actions {
+    margin-top: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px;
+    user-select: none;
+  }
+  .slide-actions-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .action-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .scenario-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #1e293b;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .scenario-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+  }
+
+  /* Right: AI Tutor Panel */
+  .tutor-container {
+    background: var(--panel-bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .tutor-header {
+    background: #182338;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .tutor-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    background: var(--accent-dim);
+    padding: 2px 8px;
+    border-radius: 12px;
+  }
+
+  /* Active Selection Banner */
+  .selection-banner {
+    background: #162032;
+    border-bottom: 1px solid var(--border);
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: #94a3b8;
+  }
+  .selection-text {
+    color: var(--accent);
+    font-weight: 600;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Flow Monitor Bar */
+  .decision-bar {
+    background: #111c2e;
+    border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .decision-step {
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--card-bg);
+    font-family: 'DM Mono', monospace;
+  }
+  .decision-step.active-progressive {
+    background: linear-gradient(135deg, #0284c7, #38bdf8);
+    color: #000;
+    font-weight: 700;
+  }
+  .decision-step.active-direct {
+    background: var(--accent);
+    color: #000;
+    font-weight: 700;
+  }
+  .decision-step.active-reject {
+    background: var(--warn);
+    color: #fff;
+    font-weight: 700;
+  }
+
+  /* Chat Log */
+  .chat-box {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .msg {
+    display: flex;
+    flex-direction: column;
+    max-width: 92%;
+    animation: fadeIn 0.2s ease-in;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .msg-user {
+    align-self: flex-end;
+  }
+  .msg-ai {
+    align-self: flex-start;
+  }
+  .msg-bubble {
+    padding: 12px 15px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .msg-user .msg-bubble {
+    background: #0284c7;
+    color: #fff;
+    border-bottom-right-radius: 2px;
+  }
+  .msg-ai .msg-bubble {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    border-bottom-left-radius: 2px;
+  }
+  .msg-ai.progressive-msg .msg-bubble {
+    border-color: #38bdf8;
+    background: #1e293b;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  }
+  .msg-label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 4px;
+    color: var(--text-muted);
+  }
+  .citation-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(56, 189, 248, 0.2);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    margin-top: 6px;
+  }
+
+  /* Progressive Deep-dive Block (Tier 2) */
+  .progressive-box {
+    margin-top: 12px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .progressive-title {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .quick-options {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .quick-btn {
+    background: #253349;
+    border: 1px solid #3b4d66;
+    color: var(--text-main);
+    padding: 7px 11px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1.35;
+  }
+  .quick-btn:hover {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: var(--accent);
+  }
+
+  /* Custom Question Box inside Deep-dive */
+  .custom-question-wrap {
+    border-top: 1px dashed var(--border);
+    padding-top: 8px;
+    display: flex;
+    gap: 6px;
+  }
+  .custom-question-input {
+    flex: 1;
+    background: #0f172a;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: #fff;
+    font-size: 12px;
+    outline: none;
+  }
+  .custom-question-input:focus {
+    border-color: var(--accent);
+  }
+  .custom-send-btn {
+    background: #0284c7;
+    border: none;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .custom-send-btn:hover {
+    background: var(--accent-hover);
+  }
+
+  /* Preset Action Buttons */
+  .preset-bar {
+    padding: 8px 14px;
+    background: #182338;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+  }
+  .preset-chip {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    color: #e2e8f0;
+    font-size: 11.5px;
+    padding: 5px 10px;
+    border-radius: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .preset-chip:hover {
+    background: var(--accent);
+    color: #000;
+    font-weight: 600;
+  }
+
+  /* Input Area */
+  .tutor-footer {
+    padding: 10px 14px;
+    background: #131d31;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+  }
+  .chat-input {
+    flex: 1;
+    background: #0f172a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #fff;
+    font-size: 13px;
+    outline: none;
+  }
+  .chat-input:focus {
+    border-color: var(--accent);
+  }
+  .send-btn {
+    background: #0284c7;
+    border: none;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .send-btn:hover {
+    background: var(--accent-hover);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <div class="logo-badge">VLearn Tutor</div>
+    <div class="course-title">AI In Action · Day 01: AI & LLM Foundation</div>
+  </div>
+  <div class="cp2-badge">
+    <div class="cp2-dot"></div>
+    CP2 PROTOYPE MOCKUP · PROGRESSIVE DISCLOSURE
+  </div>
+</header>
+
+<div class="workspace">
+
+  <!-- LEFT: SLIDE VIEWER -->
+  <div class="slide-container" id="slide-container">
+    <div class="slide-toolbar">
+      <span>Trang 6 / 29 (d1-slide-hackathon.pdf)</span>
+      <span style="color: var(--accent); font-weight: 600;">✨ TÍNH NĂNG TỰ ĐỘNG: Bôi đen chữ & THẢ CHUỘT là AI tự động giải thích ngay!</span>
+    </div>
+    
+    <div class="slide-content-wrap">
+      <div class="slide-canvas" id="slide-canvas">
+        <div class="slide-num">[Trang 6]</div>
+        <h1 class="slide-h1">Kiến trúc Transformer & Cơ chế Tự chú ý</h1>
+        
+        <p class="slide-p">
+          Trước năm 2017, các mô hình xử lý ngôn ngữ truyền thống như RNN hoặc LSTM xử lý dữ liệu theo chuỗi tuần tự từng từ một, dẫn đến hiện tượng nghẽn cổ chai và khó huấn luyện song song trên lượng dữ liệu lớn.
+        </p>
+
+        <p class="slide-p">
+          Attention là bước đột phá cốt lõi cho phép mô hình liên kết trực tiếp các từ xa nhau trong câu mà không bị giới hạn bộ nhớ ngắn hạn.
+        </p>
+
+        <p class="slide-p">
+          Transformer giải quyết triệt để nhờ cơ chế Self-Attention xử lý song song toàn bộ ngữ cảnh cùng một lúc. Điều này giúp chi phí tính toán giảm đáng kể khi tận dụng các cụm GPU hiện đại.
+        </p>
+
+        <p class="slide-p" style="color: #64748b; font-size: 13px; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+          <em>* Lưu ý: Thuật toán PPO (Proximal Policy Optimization) thuộc bài học RLHF chuyên sâu, không có trong nội dung bài học Day 1 này.</em>
+        </p>
+
+        <!-- Scenario Quick Selectors for TA demo -->
+        <div class="slide-actions">
+          <div class="slide-actions-title">Bấm nhanh kịch bản kiểm thử luồng (CP2 Demo):</div>
+          <div class="action-btns">
+            <button class="scenario-btn" onclick="autoSelectText('Transformer', 1)">1. Bôi đen "Transformer" → Tóm tắt 2 câu + Khung đào sâu</button>
+            <button class="scenario-btn" onclick="autoSelectText('Transformer giải quyết triệt để nhờ cơ chế Self-Attention xử lý song song toàn bộ ngữ cảnh cùng một lúc.', 2)">2. Bôi đen cả câu dài → Trả lời trực tiếp</button>
+            <button class="scenario-btn" onclick="autoSelectText('Thuật toán PPO (Proximal Policy Optimization)', 3)">3. Bôi đen "PPO / RLHF" → Từ chối không bịa</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Auto-Toast -->
+    <div id="auto-toast">⚡ Đã nhận diện bôi đen, AI Tutor đang phân tích...</div>
+  </div>
+
+  <!-- RIGHT: AI TUTOR PANEL -->
+  <div class="tutor-container">
+    <div class="tutor-header">
+      <div class="tutor-title">
+        <span>🤖 AI Tutor</span>
+        <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(Progressive Disclosure)</span>
+      </div>
+      <div class="status-indicator">
+        <span>Progressive: ACTIVE</span>
+      </div>
+    </div>
+
+    <!-- Active Selection Banner -->
+    <div class="selection-banner">
+      <span>Đoạn bạn vừa bôi đen:</span>
+      <span class="selection-text" id="selection-preview">Chưa chọn đoạn nào</span>
+    </div>
+
+    <!-- AI Decision Monitor (HAX G11) -->
+    <div class="decision-bar" id="decision-bar">
+      <span>Decision Engine:</span>
+      <span class="decision-step" id="step-detector">1. Phân loại Input</span>
+      <span>→</span>
+      <span class="decision-step" id="step-move">2. Chọn nước đi</span>
+      <span>→</span>
+      <span class="decision-step" id="step-ground">3. Trích nguồn</span>
+    </div>
+
+    <!-- Message History -->
+    <div class="chat-box" id="chat-box">
+      <div class="msg msg-ai">
+        <div class="msg-label">AI TUTOR · VLearn</div>
+        <div class="msg-bubble">
+          Chào bạn! Mình là AI Tutor theo cơ chế <strong>Tiết lộ tiệm tiến (Progressive Disclosure)</strong>. Bạn chỉ cần <strong>dùng chuột bôi đen từ/câu trên slide rồi thả tay</strong>: mình sẽ đưa ra tóm tắt cốt lõi ngay lập tức, kèm các gợi ý và ô nhập câu hỏi riêng để bạn đào sâu nhé!
+        </div>
+      </div>
+    </div>
+
+    <!-- Preset Action Chips -->
+    <div class="preset-bar">
+      <button class="preset-chip" onclick="handlePreset('explain')">⚡ Giải thích đoạn bôi đen</button>
+      <button class="preset-chip" onclick="handlePreset('summarize')">📋 Tóm tắt ý chính</button>
+      <button class="preset-chip" onclick="handlePreset('example')">💡 Cho ví dụ thực tế</button>
+    </div>
+
+    <!-- Input Box -->
+    <div class="tutor-footer">
+      <input type="text" class="chat-input" id="user-input" placeholder="Gõ câu hỏi cho AI Tutor..." onkeydown="if(event.key==='Enter') sendCustomMessage()">
+      <button class="send-btn" onclick="sendCustomMessage()">Gửi</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let currentSelection = "";
+  let lastProcessedSelection = "";
+  const preview = document.getElementById('selection-preview');
+  const slideCanvas = document.getElementById('slide-canvas');
+  const toast = document.getElementById('auto-toast');
+
+  function showToast(msg) {
+    toast.innerText = msg;
+    toast.style.display = 'block';
+    setTimeout(() => {
+      toast.style.display = 'none';
+    }, 1400);
+  }
+
+  // TỰ ĐỘNG TRA CỨU KHI THẢ CHUỘT
+  document.addEventListener('mouseup', function(e) {
+    setTimeout(() => {
+      const selection = window.getSelection();
+      const selectedText = selection.toString().trim();
+
+      if (selectedText.length >= 2 && slideCanvas.contains(selection.anchorNode)) {
+        if (selectedText === lastProcessedSelection) return;
+        lastProcessedSelection = selectedText;
+        currentSelection = selectedText;
+        preview.innerText = `"${selectedText}" (${selectedText.length} ký tự)`;
+        preview.style.color = 'var(--accent)';
+
+        showToast(`⚡ Tự động giải nghĩa: "${selectedText.substring(0, 18)}..."`);
+        handleSelectionDecision(selectedText);
+      }
+    }, 120);
+  });
+
+  function autoSelectText(text, scenarioNum) {
+    lastProcessedSelection = text;
+    currentSelection = text;
+    preview.innerText = `"${text}" (${text.length} ký tự)`;
+    preview.style.color = 'var(--accent)';
+    handleSelectionDecision(text);
+  }
+
+  function addMessage(sender, text, isProgressive = false, citation = null, deepDiveData = null) {
+    const chatBox = document.getElementById('chat-box');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `msg msg-${sender}` + (isProgressive ? ' progressive-msg' : '');
+
+    const label = document.createElement('div');
+    label.className = 'msg-label';
+    label.innerText = sender === 'user' ? 'BẠN' : (isProgressive ? 'AI TUTOR · PROGRESSIVE DISCLOSURE' : 'AI TUTOR · GROUNDED MOVE');
+    msgDiv.appendChild(label);
+
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.innerHTML = text;
+
+    if (citation) {
+      const citeTag = document.createElement('div');
+      citeTag.className = 'citation-tag';
+      citeTag.innerHTML = `📄 ${citation}`;
+      bubble.appendChild(citeTag);
+    }
+
+    // TẦNG 2: KHUNG ĐÀO SÂU (GỢI Ý A/B + Ô NHẬP TÙY CHỌN CỦA NGƯỜI DÙNG)
+    if (deepDiveData) {
+      const box = document.createElement('div');
+      box.className = 'progressive-box';
+
+      const title = document.createElement('div');
+      title.className = 'progressive-title';
+      title.innerHTML = `💡 Đào sâu tiếp về <em>"${deepDiveData.concept}"</em>:`;
+      box.appendChild(title);
+
+      // Danh sách gợi ý sẵn A, B
+      const optContainer = document.createElement('div');
+      optContainer.className = 'quick-options';
+      deepDiveData.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'quick-btn';
+        btn.innerText = opt.label;
+        btn.onclick = () => {
+          addMessage('user', opt.label);
+          setTimeout(() => {
+            opt.action();
+          }, 350);
+        };
+        optContainer.appendChild(btn);
+      });
+      box.appendChild(optContainer);
+
+      // Ô NHẬP CÂU HỎI TÙY CHỌN (CUSTOM QUESTION BOX) - HAX G9 & PAIR
+      const customWrap = document.createElement('div');
+      customWrap.className = 'custom-question-wrap';
+
+      const customInput = document.createElement('input');
+      customInput.type = 'text';
+      customInput.className = 'custom-question-input';
+      customInput.placeholder = `Hoặc gõ câu hỏi riêng về "${deepDiveData.concept}"...`;
+      
+      const customBtn = document.createElement('button');
+      customBtn.className = 'custom-send-btn';
+      customBtn.innerText = 'Hỏi ➔';
+
+      const triggerCustomAsk = () => {
+        const query = customInput.value.trim();
+        if (!query) return;
+        addMessage('user', `[Hỏi về "${deepDiveData.concept}"]: ${query}`);
+        customInput.value = '';
+        setTimeout(() => {
+          setDecision('Tùy chỉnh của học viên', 'answer_custom_query', 'active-direct');
+          addMessage('ai', `Về thắc mắc <em>"${query}"</em>: Trong kiến trúc ${deepDiveData.concept} ở bài giảng Day 01, điều này gắn liền với khả năng duy trì biểu diễn ngữ cảnh toàn cục (Global Context) mà không bị phụ thuộc vào thứ tự thời gian của câu.`, false, '[Trang 6]');
+        }, 400);
+      };
+
+      customInput.onkeydown = (e) => {
+        if (e.key === 'Enter') triggerCustomAsk();
+      };
+      customBtn.onclick = triggerCustomAsk;
+
+      customWrap.appendChild(customInput);
+      customWrap.appendChild(customBtn);
+      box.appendChild(customWrap);
+
+      bubble.appendChild(box);
+    }
+
+    msgDiv.appendChild(bubble);
+    chatBox.appendChild(msgDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function handlePreset(type) {
+    if (!currentSelection || currentSelection.trim().length === 0) {
+      addMessage('user', 'Giải thích giúp mình!');
+      setTimeout(() => {
+        setDecision('Mơ hồ (Chưa bôi đen)', 'ask_probing_question', 'active-socratic');
+        addMessage('ai', 'Bạn chưa bôi đen đoạn nào. Hãy <strong>dùng chuột bôi đen một từ/câu trên slide rồi thả tay</strong>, AI sẽ tự động phân tích ngay nhé!', false, null);
+      }, 300);
+      return;
+    }
+    handleSelectionDecision(currentSelection);
+  }
+
+  function handleSelectionDecision(text) {
+    addMessage('user', `(Trang 6, vừa bôi đen: "${text}")`);
+
+    const lower = text.toLowerCase();
+
+    if (lower.includes('ppo') || lower.includes('rlhf') || lower.includes('thuật toán ppo')) {
+      // NHÁNH 3: Ngoài phạm vi Day 1 (Hallucination Guardrail)
+      setTimeout(() => {
+        setDecision('Ngoài phạm vi Day 1', 'reject_and_redirect', 'active-reject');
+        addMessage('ai', 'Khái niệm <strong>PPO (Proximal Policy Optimization)</strong> thuộc bài học RLHF nâng cao, không nằm trong nội dung Day 01 (chỉ học về AI & LLM Foundation). Mình là gia sư chỉ hỗ trợ kiến thức bám sát bài học hiện tại để bạn không bị loãng nhé!', false, null);
+      }, 400);
+
+    } else if (text.length < 25) {
+      // NHÁNH 1: TIẾT LỘ TIỆM TIẾN (PROGRESSIVE DISCLOSURE): TÓM TẮT 2 CÂU + GỢI MỞ ĐÀO SÂU + Ô NHẬP TÙY CHỌN
+      setTimeout(() => {
+        setDecision('Khái niệm cốt lõi', 'progressive_disclosure', 'active-progressive');
+        
+        let coreAnswer = "";
+        let optA = "";
+        let optB = "";
+
+        if (lower.includes('transformer')) {
+          coreAnswer = `<strong>Transformer</strong> là kiến trúc mạng nơ-ron nền tảng cho mọi mô hình LLM hiện đại, giải quyết triệt để vấn đề "nghẽn cổ chai" của RNN nhờ khả năng xử lý song song toàn bộ chuỗi từ cùng một lúc.`;
+          optA = "A. Transformer giải quyết nhược điểm mất trí nhớ dài hạn của RNN như thế nào?";
+          optB = "B. Kiến trúc Encoder và Decoder trong Transformer khác nhau ở đâu?";
+        } else if (lower.includes('attention')) {
+          coreAnswer = `<strong>Attention</strong> (Cơ chế tự chú ý) là kỹ thuật cho phép mô hình liên kết trực tiếp các từ ở xa nhau trong câu, gán trọng số xem từ nào quan trọng nhất với ngữ cảnh hiện tại.`;
+          optA = "A. Attention khác gì so với cơ chế bộ nhớ ẩn của LSTM?";
+          optB = "B. Cách tính tích vô hướng Query - Key - Value trong Attention";
+        } else {
+          coreAnswer = `Đoạn <em>"${text}"</em> là một mắt xích then chốt trong slide Trang 6, đóng vai trò giải phóng năng lực tính toán song song của phần cứng GPU cho các mô hình AI ngôn ngữ.`;
+          optA = `A. Ý nghĩa thực tiễn của "${text}" trong thiết kế mô hình AI`;
+          optB = `B. Liên hệ giữa "${text}" và kiến trúc Foundation Model`;
+        }
+
+        // Gọi hiển thị thông điệp gồm Tầng 1 (Tóm tắt) + Tầng 2 (Deep Dive + Ô nhập tùy ý)
+        addMessage('ai', coreAnswer, true, '[Trang 6]', {
+          concept: text,
+          options: [
+            {
+              label: optA,
+              action: () => {
+                setDecision('Đào sâu hướng A', 'review_concept (mở rộng)', 'active-direct');
+                addMessage('ai', `Mô hình cũ như RNN phải nén toàn bộ thông tin câu vào 1 vector duy nhất nên hay quên từ ở xa. Nhờ cơ chế này, mô hình duy trì kết nối trực tiếp giữa mọi vị trí, giúp nắm bắt ngữ cảnh dài vô cùng chính xác.`, false, '[Trang 6]');
+              }
+            },
+            {
+              label: optB,
+              action: () => {
+                setDecision('Đào sâu hướng B', 'review_concept (kỹ thuật)', 'active-direct');
+                addMessage('ai', `Về mặt kỹ thuật, mỗi token được chiếu thành 3 vector: Query (câu hỏi), Key (chỉ mục) và Value (nội dung). Tích vô hướng Dot-Product giữa Query và Key cho ra điểm số chú ý để điều chỉnh trọng số Value tương ứng.`, false, '[Trang 14]');
+              }
+            }
+          ]
+        });
+
+      }, 400);
+
+    } else {
+      // NHÁNH 2: Input đầy đủ cụ thể -> TRẢ LỜI TRỰC TIẾP TRONG <= 3 CÂU KÈM NGUỒN
+      setTimeout(() => {
+        setDecision('Cụ thể (Đủ ngữ cảnh)', 'give_direct_answer', 'active-direct');
+        addMessage('ai', `Đoạn này chỉ ra bước ngoặt quan trọng của Transformer: nhờ loại bỏ sự phụ thuộc tuần tự theo thời gian, mô hình có thể <strong>xử lý đồng thời tất cả các từ cùng một lúc</strong> trên cụm GPU. Điều này giúp giảm đáng kể thời gian huấn luyện và cho phép mở rộng quy mô lên hàng tỷ tham số.`, false, '[Trang 6]');
+      }, 400);
+    }
+  }
+
+  function setDecision(step1, step2, styleClass) {
+    const s1 = document.getElementById('step-detector');
+    const s2 = document.getElementById('step-move');
+    const s3 = document.getElementById('step-ground');
+
+    s1.className = `decision-step ${styleClass}`;
+    s1.innerText = `1. ${step1}`;
+
+    s2.className = `decision-step ${styleClass}`;
+    s2.innerText = `2. ${step2}`;
+
+    s3.className = 'decision-step';
+    s3.innerText = '3. [Trang 6]';
+  }
+
+  function sendCustomMessage() {
+    const input = document.getElementById('user-input');
+    const val = input.value.trim();
+    if (!val) return;
+    addMessage('user', val);
+    input.value = '';
+
+    setTimeout(() => {
+      if (val.toLowerCase().includes('ppo') || val.toLowerCase().includes('rlhf')) {
+        setDecision('Ngoài phạm vi Day 1', 'reject_and_redirect', 'active-reject');
+        addMessage('ai', 'Khái niệm này không nằm trong nội dung Day 01. Mình chỉ hỗ trợ các khái niệm trong phạm vi slide bài học hiện tại.', false, null);
+      } else if (val.length < 15) {
+        setDecision('Ngắn/Mơ hồ', 'ask_probing_question', 'active-socratic');
+        addMessage('ai', 'Câu hỏi của bạn khá ngắn gọn. Bạn hãy bôi đen cụ thể một đoạn văn bản trên slide để mình giải thích đúng ngữ cảnh nhé!', true, null);
+      } else {
+        setDecision('Cụ thể', 'give_direct_answer', 'active-direct');
+        addMessage('ai', `Về câu hỏi "${val}": Theo nội dung bài giảng Day 1, kiến trúc Foundation Model đóng vai trò là động cơ nền tảng cho làn sóng AI tạo sinh hiện nay.`, false, '[Trang 6]');
+      }
+    }, 400);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VLearn AI Tutor – Problem Canvas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1b2a;
+    --surface: #112240;
+    --surface-2: #1a3054;
+    --border: #1e3a5f;
+    --accent: #4fc3f7;
+    --accent-3: #26c6da;
+    --accent-dim: rgba(79,195,247,0.12);
+    --text-primary: #ffffff;
+    --text-secondary: #ffffff;
+    --text-muted: #cbd5e1;
+    --pain-accent: #ef9a9a;
+    --pain-dim: rgba(239,154,154,0.1);
+    --pain-border: rgba(239,154,154,0.25);
+    --sol-accent: #80cbc4;
+    --sol-dim: rgba(128,203,196,0.1);
+    --sol-border: rgba(128,203,196,0.25);
+    --auto-accent: #b39ddb;
+    --auto-dim: rgba(179,157,219,0.1);
+    --auto-border: rgba(179,157,219,0.25);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+    height: 100vh;
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 8px;
+    width: 100%;
+    max-width: 1200px;
+  }
+
+  .header-title {
+    font-size: clamp(16px, 2vw, 22px);
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  /* Grid */
+  .canvas-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 8px;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    align-content: center;
+  }
+
+  /* Cell */
+  .cell {
+    border-radius: 10px;
+    padding: 8px 12px 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .cell::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 10px 10px 0 0;
+  }
+
+  .cell-1::before { background: linear-gradient(90deg, var(--accent), var(--accent-3)); }
+  .cell-2::before { background: linear-gradient(90deg, var(--pain-accent), #ff8a80); }
+  .cell-3::before { background: linear-gradient(90deg, var(--sol-accent), #4db6ac); }
+  .cell-4::before { background: linear-gradient(90deg, var(--auto-accent), #ce93d8); }
+
+  .cell-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-family: 'DM Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .cell-1 .cell-label { color: var(--accent); }
+  .cell-2 .cell-label { color: var(--pain-accent); }
+  .cell-3 .cell-label { color: var(--sol-accent); }
+  .cell-4 .cell-label { color: var(--auto-accent); }
+
+  .cell-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    opacity: 0.2;
+    background: currentColor;
+  }
+
+  .cell-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+    flex-shrink: 0;
+  }
+
+  /* Block */
+  .block { }
+
+  .block-head {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .block-body {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .block-body strong { color: #ffffff; font-weight: 700; }
+
+  /* Flow */
+  .flow { display: flex; flex-direction: column; gap: 2px; }
+
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  .flow-step .arrow {
+    color: var(--accent);
+    font-weight: 700;
+    flex-shrink: 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  .flow-step.warn .arrow { color: var(--pain-accent); }
+  .flow-step.warn { color: #ffcdd2; }
+
+  /* Stats */
+  .stat-list { display: flex; flex-direction: column; gap: 3px; }
+
+  .stat {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: var(--pain-dim);
+    border: 1px solid var(--pain-border);
+    border-radius: 7px;
+    padding: 4px 8px;
+  }
+
+  .stat-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pain-accent);
+    flex-shrink: 0;
+    min-width: 48px;
+  }
+
+  .stat-desc {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  .stat-desc strong { color: #ffffff; font-weight: 700; }
+
+  /* Slice */
+  .slice {
+    background: var(--sol-dim);
+    border: 1px solid var(--sol-border);
+    border-radius: 8px;
+    padding: 6px 10px;
+  }
+
+  .slice-title {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--sol-accent);
+    margin-bottom: 4px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .slice-flow { display: flex; flex-direction: column; gap: 2px; }
+
+  .slice-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  .slice-step .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--sol-accent);
+    flex-shrink: 0;
+    margin-top: 6px;
+  }
+
+  /* Decision box */
+  .decision-box {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 5px 10px;
+  }
+
+  .decision-box .db-head {
+    font-size: 10px;
+    color: var(--sol-accent);
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 3px;
+  }
+
+  .decision-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding: 2px 0;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.4;
+  }
+
+  .decision-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .decision-row .if {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    flex-shrink: 0;
+    background: var(--accent-dim);
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-top: 2px;
+  }
+
+  /* Automation */
+  .auto-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--auto-dim);
+    border: 1px solid var(--auto-border);
+    border-radius: 20px;
+    padding: 2px 9px;
+    align-self: flex-start;
+  }
+
+  .auto-badge-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--auto-accent);
+    box-shadow: 0 0 5px var(--auto-accent);
+  }
+
+  .auto-badge-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--auto-accent);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .auto-reason {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding-left: 10px;
+    border-left: 2px solid var(--auto-accent);
+    flex-shrink: 0;
+  }
+
+  .info-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 4px 8px;
+    background: var(--auto-dim);
+    border: 1px solid var(--auto-border);
+    border-radius: 7px;
+  }
+
+  .info-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--auto-accent);
+    font-family: 'DM Mono', monospace;
+    flex-shrink: 0;
+    min-width: 72px;
+    padding-top: 1px;
+  }
+
+  .info-val {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  .info-val strong { color: #ffffff; font-weight: 700; }
+
+  .roles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  .role-tag {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(179,157,219,0.12);
+    border: 1px solid rgba(179,157,219,0.25);
+    color: var(--auto-accent);
+    font-family: 'DM Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">HƯỚNG A1 &nbsp; TỐI ƯU AI TUTOR HIỆN CÓ</div>
+</div>
+
+<div class="canvas-grid">
+
+  <!-- Ô 1 -->
+  <div class="cell cell-1">
+    <div class="cell-label">Ô 1</div>
+    <div class="cell-title">Người dùng &amp; Công việc</div>
+
+    <div class="block">
+      <div class="block-head">Người dùng</div>
+      <div class="block-body"><strong>Học viên VLearn</strong> đang học qua slide bài giảng.</div>
+    </div>
+
+    <div class="block">
+      <div class="block-head">Công việc cần làm</div>
+      <div class="block-body">Đọc slide · bôi đen đoạn chưa hiểu · bấm câu mẫu gợi ý → hiểu nhanh trọng tâm.</div>
+    </div>
+
+    <div class="block">
+      <div class="block-head">Luồng hiện tại</div>
+      <div class="flow">
+        <div class="flow-step">
+          <span class="arrow">①</span>
+          <span>Bấm nút câu mẫu</span>
+        </div>
+        <div class="flow-step warn">
+          <span class="arrow">→</span>
+          <span>AI trả về <strong>5–10 đoạn văn dài</strong></span>
+        </div>
+        <div class="flow-step warn">
+          <span class="arrow">→</span>
+          <span>Học viên đọc lướt hoặc <strong>bỏ cuộc</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ô 2 -->
+  <div class="cell cell-2">
+    <div class="cell-label">Ô 2</div>
+    <div class="cell-title">Nỗi đau &amp; Bằng chứng</div>
+
+    <div class="block">
+      <div class="block-head">Nỗi đau</div>
+      <div class="block-body">Bị ngợp bởi câu trả lời dài một chiều · không biết AI có đang dựa trên bài học hay tự suy diễn.</div>
+    </div>
+
+    <div class="block">
+      <div class="block-head">Số liệu từ tutor_turns.csv</div>
+      <div class="stat-list">
+        <div class="stat">
+          <div class="stat-num">28,02%</div>
+          <div class="stat-desc"><strong>3.781/13.494</strong> câu trả lời không trích dẫn nguồn</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">22,73%</div>
+          <div class="stat-desc">câu hỏi bấm mẫu → AI chọn <strong>tuôn lý thuyết 89,87%</strong></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">0,21%</div>
+          <div class="stat-desc">AI hỏi ngược Socratic <strong>(chỉ 28/13.494 lượt)</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-head">Dẫn chứng cụ thể — <span style="font-family:'Inter',sans-serif;font-weight:700;color:#ffffff;text-transform:none;letter-spacing:0;font-size:13px;">T10457: 988 ký tự, không trích nguồn.</span></div>
+    </div>
+  </div>
+
+  <!-- Ô 3 -->
+  <div class="cell cell-3">
+    <div class="cell-label">Ô 3</div>
+    <div class="cell-title">Lát cắt Giải pháp AI</div>
+
+    <div class="slice">
+      <div class="slice-title">Lát cắt</div>
+      <div class="slice-flow">
+        <div class="slice-step">
+          <div class="dot"></div>
+          <span>Học viên bấm câu mẫu <em>"giải thích đoạn bôi đen"</em></span>
+        </div>
+        <div class="slice-step">
+          <div class="dot"></div>
+          <span>AI hỏi lại <strong>1 câu Socratic</strong> thay vì tuôn lý thuyết dài</span>
+        </div>
+        <div class="slice-step">
+          <div class="dot"></div>
+          <span>Học viên <strong>hiểu đúng trọng tâm</strong>, không bị overload</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="decision-box">
+      <div class="db-head">Quyết định AI</div>
+      <div class="decision-row">
+        <span class="if">IF</span>
+        <span>Input ngắn / tổng quát → sinh <strong>câu hỏi Socratic</strong></span>
+      </div>
+      <div class="decision-row">
+        <span class="if">IF</span>
+        <span>Input cụ thể → trả lời <strong>≤ 3 câu</strong> kèm <strong>[trang N]</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ô 4 -->
+  <div class="cell cell-4">
+    <div class="cell-label">Ô 4</div>
+    <div class="cell-title">Mức Automation &amp; Thực thi</div>
+
+    <div class="auto-badge">
+      <div class="auto-badge-dot"></div>
+      <div class="auto-badge-text">Conditional Automation</div>
+    </div>
+
+    <div class="auto-reason">
+      Hỏi lại khi thiếu ngữ cảnh · trả lời khi chắc chắn có căn cứ trong tài liệu.<br>
+      <em>Tránh chi phí hiểu sai kiến thức nền tảng.</em>
+    </div>
+
+    <div class="info-row">
+      <div class="info-label">Willing Users</div>
+      <div class="info-val"><strong>2 học viên lớp 3A</strong> cam kết test</div>
+    </div>
+
+    <div class="info-row">
+      <div class="info-label">Phân công</div>
+      <div class="info-val">
+        Đội trưởng nộp bài + chia đều 4 vai trò:
+        <div class="roles">
+          <span class="role-tag">PM</span>
+          <span class="role-tag">AI/Eval</span>
+          <span class="role-tag">Dev</span>
+          <span class="role-tag">QA</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
