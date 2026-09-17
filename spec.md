@@ -9,9 +9,9 @@ Loại: [x] Tối ưu tính năng có sẵn  [ ] Tính năng mới
 - **Core JTBD (Đồng bộ chuẩn từ `jtbd-worksheet.md`):** Xác thực và làm rõ ngay lập tức bản chất các khái niệm kỹ thuật khó hiểu trên bài giảng dựa trên tài liệu chính thống trong vòng 10 giây để không bị sai lệch kiến thức hoặc đứt mạch tư duy. *(Chuẩn công thức: [verb] + [object] + [contextual clarifier], tuyệt đối không chứa chữ AI/tên sản phẩm)*
 - **Problem statement:** Khi học viên cần làm rõ một khái niệm trên bài giảng, người hỗ trợ thường đưa ra các câu trả lời phỏng đoán không có nguồn kiểm chứng hoặc tuôn cả bài văn dài hàng nghìn ký tự, khiến người học bị quá tải nhận thức và hoang mang về tính chính xác học thuật. *(Không chứa chữ AI/tên sản phẩm)*
 - **Three Core Job Stories (Trích xuất từ `jtbd-worksheet.md`):**
-  1. *JS1 (Grounding & Citation):* Khi gặp đoạn giải thích khó hiểu trên slide $\rightarrow$ muốn được giải thích súc tích kèm trích dẫn số trang/mã đoạn bài giảng $\rightarrow$ để nắm vững bài mà không phải tua lại cả video.
-  2. *JS2 (Hallucination Defense):* Khi tò mò hỏi khái niệm nâng cao chưa dạy (VD: PPO) $\rightarrow$ muốn được thông báo rõ ràng nội dung nằm ngoài phạm vi $\rightarrow$ để tránh hiểu nhầm kiến thức chắp vá.
-  3. *JS3 (Socratic Probing):* Khi bôi đen từ khóa ngắn/mơ hồ $\rightarrow$ muốn được gợi mở đào sâu 2 khía cạnh $\rightarrow$ để nhận câu trả lời đúng kích cỡ nhu cầu nhận thức.
+  1. *JS1 (Grounding & Citation):* Khi gặp đoạn giải thích khó hiểu trên slide -> muốn được giải thích súc tích kèm trích dẫn số trang/mã đoạn bài giảng -> để nắm vững bài mà không phải tua lại cả video.
+  2. *JS2 (Hallucination Defense):* Khi tò mò hỏi khái niệm nâng cao chưa dạy (VD: PPO) -> muốn được thông báo rõ ràng nội dung nằm ngoài phạm vi -> để tránh hiểu nhầm kiến thức chắp vá.
+  3. *JS3 (Socratic Probing):* Khi bôi đen từ khóa ngắn/mơ hồ -> muốn được gợi mở đào sâu 2 khía cạnh -> để nhận câu trả lời đúng kích cỡ nhu cầu nhận thức.
 - **Evidence (Dữ liệu khai phá từ 13.494 turns log thực tế trong `data/vlearn-pack/`):**
   - **Số liệu mining:**
     - **28.02%** câu trả lời (3.781 / 13.494 lượt chat) hoàn toàn mất nguồn trích dẫn (`citations = []`).
@@ -43,7 +43,7 @@ Loại: [x] Tối ưu tính năng có sẵn  [ ] Tính năng mới
 
 ## §3. Giải pháp tương tự đã nghiên cứu
 - **Google NotebookLM:**
-  - *Flow:* Nhận tài liệu $\rightarrow$ Học viên hỏi $\rightarrow$ Trả lời gắn số trích dẫn trực tiếp $\rightarrow$ Click vào số trích dẫn nhảy tới đúng vị trí nguồn.
+  - *Flow:* Nhận tài liệu -> Học viên hỏi -> Trả lời gắn số trích dẫn trực tiếp -> Click vào số trích dẫn nhảy tới đúng vị trí nguồn.
   - *Đáng học:* Cơ chế Source Grounding cực kỳ nghiêm ngặt; không bịa số trang hoặc trích dẫn rỗng khi tài liệu không đề cập.
   - *Đáng né:* Quá thụ động, câu trả lời còn mang tính tra cứu tài liệu một chiều, thiếu định hướng sư phạm cho người học.
   - *LearnLoop khác biệt:* Áp dụng nguyên tắc **Progressive Disclosure** (giới hạn < 250 ký tự) kết hợp **Socratic Probing** (chủ động sinh 2 nút gợi ý đào sâu đa tầng) và trích dẫn kép đồng thời Slide PDF + Transcript MD.
@@ -56,20 +56,20 @@ Loại: [x] Tối ưu tính năng có sẵn  [ ] Tính năng mới
 ---
 
 ## §4. Thiết kế
-- **Lát cắt MỘT CÂU:** Khi học viên bôi đen một thuật ngữ trên slide bài giảng VLearn, AI Tutor cung cấp micro-summary dưới 250 ký tự kèm trích dẫn kép Slide-Transcript chính xác và 2 câu hỏi gợi ý Socratic để học viên chủ động đào sâu mà không bị quá tải nhận thức.
+- **Lát cắt:** Khi học viên bôi đen một thuật ngữ trên slide bài giảng VLearn, AI Tutor cung cấp micro-summary dưới 250 ký tự kèm trích dẫn kép Slide-Transcript chính xác và 2 câu hỏi gợi ý Socratic để học viên chủ động đào sâu mà không bị quá tải nhận thức.
 - **Non-goals (3 thứ KHÔNG build):**
   1. Không làm chatbot tán gẫu tự do hoặc giải quyết các vấn đề ngoài phạm vi học phần AI.
   2. Không làm công cụ viết code hoặc làm bài tập thay học viên.
   3. Không thay thế vai trò giải đáp chuyên sâu 1-1 của Giảng viên và Trợ giảng trong các buổi chữa bài.
 - **Mức prototype nhắm tới:** `[x] Working Prototype` — Ứng dụng Web hoàn chỉnh gồm Slide Viewer PDF đồng bộ hai chiều, kết nối trực tiếp với backend dynamic RAG qua OpenAI Live API (`gpt-4o-mini`).
-- **Automation Level:** `[x] Conditional Automation` — Tự động trả lời khi thuật ngữ có căn cứ trong tài liệu; tự động chặn và nhắc nhở trong 0ms khi thao tác lỗi; từ chối trung thực khi vượt thẩm quyền (như thuật toán PPO chưa dạy). *(Lý do cost-of-error: Kiến thức sai lệch làm học viên hiểu sai bản chất mô hình và thi rớt).*
+- **Automation Level:** `[x] Conditional Automation` — Tự động trả lời khi thuật ngữ có căn cứ trong tài liệu; tự động chặn và nhắc nhở trong <100ms khi thao tác lỗi; từ chối trung thực khi vượt thẩm quyền (như thuật toán PPO chưa dạy). *(Lý do cost-of-error: Kiến thức sai lệch làm học viên hiểu sai bản chất mô hình và thi rớt).*
 - **§4b. Nguyên tắc HAX & PAIR đã áp dụng:**
   | Nguyên tắc | Áp cụ thể vào đâu trong prototype |
   |---|---|
   | **PAIR: Progressive Disclosure** | Hộp giải thích hiển thị micro-summary 1-3 câu (< 250 ký tự) để học viên nắm nhanh ý chính, ẩn các thông tin chi tiết vào các nút bấm đào sâu Socratic. |
   | **HAX G11: Make clear why the system did what it did** | Badge nguồn hiển thị tách biệt rõ ràng ở chân hộp thoại: `Slide [file.pdf] · Trang N & Transcript [transcript.md] · Đoạn [Mã]` để học viên đối soát 1 chạm. |
   | **HAX G2: Make clear how well the system can do what it can do** | Giới hạn ranh giới rõ ràng: Khi học viên hỏi thuật toán PPO, hệ thống nêu rõ PPO thuộc học phần RLHF chuyên sâu chưa học và từ chối suy đoán bừa. |
-  | **HAX G8: Support efficient correction (Dual-layer Guardrail)** | Bộ lọc Guardrail 2 lớp (Client `app.js` + Server `server.py`) chặn đứng trong 0ms các thao tác bôi nhầm chữ cái đơn (`r`), ký hiệu (`--> &`) và hướng dẫn bôi lại trọn vẹn. |
+  | **HAX G8: Support efficient correction (Dual-layer Guardrail)** | Bộ lọc Guardrail 2 lớp (Client `app.js` + Server `server.py`) chặn đứng trong <1s các thao tác bôi nhầm chữ cái đơn (`r`), ký hiệu (`--> &`) và hướng dẫn bôi lại trọn vẹn. |
 
 ---
 
@@ -78,26 +78,27 @@ Loại: [x] Tối ưu tính năng có sẵn  [ ] Tính năng mới
 
 | STT | Tình huống cụ thể | Thuộc lớp chỗ khó | Hành vi mong muốn (Nói gì / Hiện gì / Cho user làm gì) | Nguyên tắc áp dụng |
 | :---: | :--- | :--- | :--- | :--- |
-| 1 | Bôi đen thuật ngữ "5 loại mô hình ngôn ngữ" ở Slide Trang 8 | **① Nguồn sự thật** | Trả lời đúng 5 mô hình trên slide (RNN, LSTM, Transformer, BERT, GPT), cite đúng Slide Trang 8, triệt tiêu hoàn toàn ảo giác cite `[trang 304]`. | HAX G11 / PAIR Trust |
-| 2 | Bôi đen từ khóa "Transformer" trên Slide Trang 8 | **① Nguồn sự thật** | Trả về micro-summary < 200 ký tự, trích dẫn đúng `Slide [d1-slide-hackathon.pdf] · Trang 8 & Transcript [transcript-04-clean.md] · Đoạn [T04-038]`, xóa bỏ mã `trang 957`. | HAX G11 / PAIR Explainability |
-| 3 | Bôi nhầm 1 ký tự rác `"r"` | **② Mơ hồ / Thiếu thông tin** | Chặn trong 0ms, không gọi API tốn chi phí: Hiện thông báo nhắc nhở nội dung quá ngắn, hướng dẫn bôi đen trọn vẹn thuật ngữ. | HAX G8 / PAIR Errors |
-| 4 | Bôi nhầm ký hiệu mũi tên `"--> &"` | **② Mơ hồ / Thiếu thông tin** | Chặn ngay tại Client/Server trong 0ms, triệt tiêu 100% tình trạng đoán mò sang embedding lung tung. | HAX G8 / PAIR Graceful Failure |
-| 5 | Hỏi về thuật toán huấn luyện PPO (Proximal Policy Optimization) | **③ Ngoài phạm vi / Thẩm quyền** | Thừa nhận trung thực: PPO thuộc học phần RLHF chuyên sâu chưa dạy trong buổi này. Ghi chú phạm vi bài học, không tự chém gió. | HAX G2 / PAIR Mental Models |
-| 6 | Thử chèn câu lệnh prompt injection / vượt quyền hệ thống | **③ Ngoài phạm vi / Thẩm quyền** | Hệ thống giữ vững vai trò AI Tutor, từ chối thực thi câu lệnh phá hoại, đặt `is_out_of_scope: true`. | HAX G2 / An toàn hệ thống |
-| 7 | Bôi đen thuật ngữ "Context rot" và cửa sổ 1 triệu token | **④ Đặc thù domain** | Giải thích chính xác hiện tượng suy giảm chú ý khi ngữ cảnh quá dài và bùng nổ chi phí, trích dẫn đúng đoạn `[T04-052]`. | PAIR Factuality / Domain Accuracy |
-| 8 | So sánh mô hình hiểu hai chiều (BERT) và mô hình sinh văn bản (GPT) | **④ Đặc thù domain** | Phân biệt rõ ràng bản chất 2 chiều (Bidirectional) của BERT vs sinh tuần tự (Generative) của GPT kèm trích dẫn Slide Trang 8 & Transcript `[T04-049]`. | PAIR Domain Accuracy |
+| 1 | Bôi đen thuật ngữ "5 loại mô hình ngôn ngữ" ở Slide Trang 8 | **1 Nguồn sự thật** | Trả lời đúng 5 mô hình trên slide (RNN, LSTM, Transformer, BERT, GPT), cite đúng Slide Trang 8, triệt tiêu hoàn toàn ảo giác cite `[trang 304]`. | HAX G11 / PAIR Trust |
+| 2 | Bôi đen từ khóa "Transformer" trên Slide Trang 8 | **1 Nguồn sự thật** | Trả về micro-summary < 200 ký tự, trích dẫn đúng `Slide [d1-slide-hackathon.pdf] · Trang 8 & Transcript [transcript-04-clean.md] · Đoạn [T04-038]`, xóa bỏ mã `trang 957`. | HAX G11 / PAIR Explainability |
+| 3 | Bôi nhầm 1 ký tự rác `"r"` | **2 Mơ hồ / Thiếu thông tin** | Chặn trong 1
+10ms, không gọi API tốn chi phí: Hiện thông báo nhắc nhở nội dung quá ngắn, hướng dẫn bôi đen trọn vẹn thuật ngữ. | HAX G8 / PAIR Errors |
+| 4 | Bôi nhầm ký hiệu mũi tên `"--> &"` | **2 Mơ hồ / Thiếu thông tin** | Chặn ngay tại Client/Server trong 10ms, triệt tiêu 100% tình trạng đoán mò sang embedding lung tung. | HAX G8 / PAIR Graceful Failure |
+| 5 | Hỏi về thuật toán huấn luyện PPO (Proximal Policy Optimization) | **3 Ngoài phạm vi / Thẩm quyền** | Thừa nhận trung thực: PPO thuộc học phần RLHF chuyên sâu chưa dạy trong buổi này. Ghi chú phạm vi bài học, không tự chém gió. | HAX G2 / PAIR Mental Models |
+| 6 | Thử chèn câu lệnh prompt injection / vượt quyền hệ thống | **3 Ngoài phạm vi / Thẩm quyền** | Hệ thống giữ vững vai trò AI Tutor, từ chối thực thi câu lệnh phá hoại, đặt `is_out_of_scope: true`. | HAX G2 / An toàn hệ thống |
+| 7 | Bôi đen thuật ngữ "Context rot" và cửa sổ 1 triệu token | **4 Đặc thù domain** | Giải thích chính xác hiện tượng suy giảm chú ý khi ngữ cảnh quá dài và bùng nổ chi phí, trích dẫn đúng đoạn `[T04-052]`. | PAIR Factuality / Domain Accuracy |
+
 
 ---
 
 ## §6. Bốn đường đi của trải nghiệm
-- **Happy path:** Học viên bôi đen trọn vẹn thuật ngữ trên slide (VD: "Kỹ thuật Delimiters") $\rightarrow$ Hệ thống hiển thị micro-summary súc tích 2 câu (< 250 ký tự) $\rightarrow$ Đính kèm badge trích dẫn kép `Slide [d4-slide-hackathon.pdf] · Trang 55 & Transcript [transcript-04-clean.md] · Đoạn [T-Delimiters]` $\rightarrow$ Hiển thị 2 nút bấm Socratic để học viên bấm chọn đào sâu tiếp.
-- **Low-confidence path:** Học viên bôi đen khái niệm ngắn nhưng hợp lệ $\rightarrow$ Hệ thống giải thích cô đọng ý cốt lõi, đồng thời chủ động đặt câu hỏi định hướng để làm rõ bối cảnh học viên muốn áp dụng.
-- **Failure / Không căn cứ (Out-of-scope):** Học viên hỏi khái niệm ngoài phạm vi bài học (VD: PPO) $\rightarrow$ Hệ thống từ chối lịch sự, giải thích rõ đây là nội dung thuộc học phần nâng cao, trích dẫn ghi chú phạm vi bài học và không suy diễn bừa bãi.
-- **Correction path (Khắc phục lỗi thao tác):** Học viên bôi nhầm 1 chữ cái hoặc ký hiệu đồ họa $\rightarrow$ Guardrail chặn ngay lập tức (< 10ms), hiển thị hướng dẫn thân thiện mời người học bôi đen trọn vẹn cụm từ trên slide.
+- **Happy path:** Học viên bôi đen trọn vẹn thuật ngữ trên slide (VD: "Kỹ thuật Delimiters") -> Hệ thống hiển thị micro-summary súc tích 2 câu (< 250 ký tự) -> Đính kèm badge trích dẫn kép `Slide [d4-slide-hackathon.pdf] · Trang 55 & Transcript [transcript-04-clean.md] · Đoạn [T-Delimiters]` -> Hiển thị 2 nút bấm Socratic để học viên bấm chọn đào sâu tiếp.
+- **Low-confidence path:** Học viên bôi đen khái niệm ngắn nhưng hợp lệ -> Hệ thống giải thích cô đọng ý cốt lõi, đồng thời chủ động đặt câu hỏi định hướng để làm rõ bối cảnh học viên muốn áp dụng.
+- **Failure / Không căn cứ (Out-of-scope):** Học viên hỏi khái niệm ngoài phạm vi bài học (VD: PPO) -> Hệ thống từ chối lịch sự, giải thích rõ đây là nội dung thuộc học phần nâng cao, trích dẫn ghi chú phạm vi bài học và không suy diễn bừa bãi.
+- **Correction path (Khắc phục lỗi thao tác):** Học viên bôi nhầm 1 chữ cái hoặc ký hiệu đồ họa -> Guardrail chặn ngay lập tức (< 10ms), hiển thị hướng dẫn thân thiện mời người học bôi đen trọn vẹn cụm từ trên slide.
 
 ---
 
-## §7. Kiểm thử & Quality Bar (Khóa cứng tại CP4)
+## §7. Kiểm thử & Quality Bar
 - **Chiều chất lượng & Định nghĩa kiểm chứng được:**
   1. *Progressive Disclosure (Độ dài nhận thức):* Câu trả lời tóm tắt vi mô phải dưới 280 ký tự (giảm $\ge 70\%$ so với mức trung bình 1.051 ký tự cũ).
   2. *Source Grounding (Độ chính xác nguồn):* 100% câu hỏi nội dung phải có trích dẫn đúng tên file slide thật, số trang thật và mã đoạn transcript thật; triệt tiêu 100% ảo giác số trang (như trang 304, 957, 1077).
@@ -116,7 +117,7 @@ Loại: [x] Tối ưu tính năng có sẵn  [ ] Tính năng mới
   - **Tỷ lệ Pass Golden Set:** **100.0% (20 / 20 Test Cases ĐẠT CHUẨN)** (Hệ thống cũ: 0/20 do dính lỗi kiến trúc).
   - **Tỷ lệ Trích dẫn Nguồn Hợp lệ:** **100.0%** (triệt tiêu hoàn toàn 28.02% lỗi mất nguồn).
   - **Tỷ lệ Ảo giác Số trang:** **0.0%** (100% trích dẫn đúng trang slide thật và đoạn transcript thật).
-  - **Độ dài phản hồi trung bình:** **205.2 ký tự** (~45 từ) $\rightarrow$ **Giảm 80.5%** độ dài văn bản quá tải so với mức 1.051 ký tự cũ.
+  - **Độ dài phản hồi trung bình:** **205.2 ký tự** (~45 từ) -> **Giảm 80.5%** độ dài văn bản quá tải so với mức 1.051 ký tự cũ.
   - **Độ trễ trung bình:** **2.682 ms** trên Live API GPT-4o-mini; **0 ms** đối với các case guardrail chặn lỗi thao tác.
   - *File báo cáo đối soát master:* [`eval/Bao_cao_kiem_chung_toan_bo_20_test_cases_tu_dong.xlsx`](file:///home/namphuong/Desktop/vin_lab/K4-3A-Day05-06-AI-Product-Hackathon/eval/Bao_cao_kiem_chung_toan_bo_20_test_cases_tu_dong.xlsx).
 
@@ -132,6 +133,12 @@ Loại: [x] Tối ưu tính năng có sẵn  [ ] Tính năng mới
   1. Hoàng Văn Nam (Học viên Phòng E403 - Lớp 3A)
   2. Lê Minh Tuấn (Học viên Phòng E403 - Lớp 3A)
   3. Trần Đức Anh (Học viên Phòng E403 - Lớp 3A)
+- **Tự khai phần chưa làm xong (Báo cáo phần còn thiếu theo yêu cầu mốc CP4):**
+  - *Phần đã hoàn thành (100%):* Toàn bộ kiến trúc Ingestion đa nguồn (59 trang PDF, 701 đoạn Markdown), backend Dynamic RAG kết nối Live API GPT-4o-mini (`server.py`), giao diện Slide Viewer tương tác hai chiều (`app.js`), bộ lọc Dual-layer Guardrail, và bộ Golden Set 20/20 test cases tự động (đạt 100% Pass Rate).
+  - *Phần còn thiếu cần hoàn thiện trước mốc CP5 (13:00 18/9):*
+    1. Thiết kế bộ slide thuyết trình 6 trang chuẩn (`demo-slides.pdf`) theo hướng dẫn `02-guide.md` §5.
+    2. Quay video demo dự phòng (backup demo video 30s–60s) để phòng ngừa rủi ro mạng chập chờn khi thuyết trình live.
+    3. Tổ chức phiên thử nghiệm thực tế (Usability Lab) với 2-3 Willing Users tại phòng E403 để thu thập log feedback nguyên văn vào thư mục `validation/` (săn điểm thưởng R6: +8 điểm).
 - **Kế hoạch cho LAB 18/9:**
   - *13:00 18/9 (CP5):* Hoàn thành slide thuyết trình 6 trang (`demo-slides.pdf`) và video demo dự phòng.
   - *14:00–16:00 18/9:* Chạy thử nghiệm người dùng thật với 2 Willing Users, ghi nhận feedback log vào thư mục `validation/`.
