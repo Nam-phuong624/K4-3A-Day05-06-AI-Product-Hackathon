@@ -47,6 +47,13 @@ def init_knowledge_base():
                         # Trích xuất tiêu đề ngắn
                         lines = [l.strip() for l in txt.split('\n') if len(l.strip()) > 3 and not 'AI IN ACTION' in l and not 'DAY 0' in l]
                         title = lines[0] if lines else f"Trang {slide_num}"
+                        
+                        # Bổ sung chi tiết giải thích cho Slide 8 về phân biệt BERT (hiểu 2 chiều) và GPT (sinh tuần tự)
+                        if f == 'd1-slide-hackathon.pdf' and (i + 1) == 8:
+                            txt += """
+- BERT: Mô hình hiểu ngôn ngữ hai chiều (bidirectional), nhìn toàn cảnh ngữ cảnh cả hai phía của từ để phân tích ý nghĩa và trích xuất đặc trưng.
+- GPT: Mô hình sinh văn bản (generative), hoạt động theo chiều từ trái sang phải dự đoán tuần tự token tiếp theo."""
+
                         ALL_SLIDES.append({
                             'source_file': f,
                             'page_index': i + 1,
@@ -93,37 +100,74 @@ Mục đích: Ngăn ngừa hiện tượng Context Bleed và tấn công Prompt 
     ALL_TRANSCRIPTS.append({
         'source_file': 'transcript-04-clean.md',
         'tag': 'T-Delimiters',
-        'text': 'Giảng viên Đặng Đức Huy: Delimiters (như cặp thẻ XML <user_query>...</user_query> hoặc dấu phân tách """) là chiến thuật phòng vệ lớp 1 quan trọng nhất trong Prompt Engineering. Thay vì để dữ liệu người dùng trộn lẫn trực tiếp vào nội dung các câu lệnh hệ thống, lập trình viên bắt buộc phải bao bọc chúng trong các thẻ định danh rõ ràng. Khi mô hình nhận lệnh chỉ xử lý văn bản trong thẻ, nó sẽ phớt lờ các câu lệnh độc hại chèn vào từ bên ngoài, giúp hành vi của Agent luôn nhất quán và an toàn trong môi trường production.'
+        'text': 'Giảng viên Đặng Đức Huy: Delimiters (như cặp thẻ XML <user_query>...</user_query> hoặc dấu phân tách """) là chiến thuật phòng vệ lớp 1 quan trọng nhất trong Prompt Engineering. Thay vì để dữ liệu người dùng trộn lẫn trực tiếp vào nội dung các câu lệnh hệ thống, lập trình viên bắt buộc phải bao bọc chúng trong các thẻ định danh rõ ràng. Khi mô hình nhận lệnh chỉ xử lý văn bản trong thẻ, nó sẽ phớt lờ các câu lệnh độc hại chèn vào từ bên ngoài, giúp hành vi của Agent luôn nhất quán và an toàn trong môi trường production. Mục đích kỹ thuật: Ngăn ngừa hiện tượng Context Bleed và tấn công Prompt Injection, phân định rõ giữa lệnh hệ thống (Instruction) và dữ liệu thô (Data).'
     })
 
     print(f"ĐÃ NẠP THÀNH CÔNG: {len(ALL_SLIDES)} trang Slides & {len(ALL_TRANSCRIPTS)} đoạn Transcript.")
 
 init_knowledge_base()
 
+STOP_WORDS = set(['và', 'hoặc', 'là', 'của', 'trong', 'để', 'có', 'cho', 'với', 'các', 'những', 'được', 'thì', 'này', 'đó', 'tại', 'sao', 'lại', 'làm', 'giải', 'thích', 'khái', 'niệm', 'bài', 'học', 'gì', 'như', 'thế', 'nào', 'câu', 'hỏi', 'hãy', 'cho', 'tôi', 'biết', 'về', 'so', 'sánh'])
+
 def tokenize(text):
     return [w for w in re.findall(r'\w+', text.lower()) if len(w) > 1]
 
-def rank_documents(query, documents, text_key='text', top_k=3):
-    q_tokens = tokenize(query)
-    if not q_tokens:
-        return documents[:top_k]
-    
-    def score(doc):
-        d_tokens = set(tokenize(doc[text_key]))
-        match_count = sum(1 for t in q_tokens if t in d_tokens)
-        # Ưu tiên nếu cụm từ nguyên vẹn xuất hiện
-        phrase_bonus = 3 if query.lower() in doc[text_key].lower() else 0
-        return match_count + phrase_bonus
+def get_key_phrases(text):
+    words = re.findall(r'[a-zA-Z0-9àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệđìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ]+', text.lower())
+    phrases = []
+    for i in range(len(words)-1):
+        phrases.append(words[i] + ' ' + words[i+1])
+    for i in range(len(words)-2):
+        phrases.append(words[i] + ' ' + words[i+1] + ' ' + words[i+2])
+    return phrases
 
-    scored = sorted(documents, key=score, reverse=True)
-    return scored[:top_k]
+def rank_documents(query, documents, user_text='', text_key='text', top_k=3):
+    words = [w for w in tokenize(query) if w not in STOP_WORDS]
+    user_words = [w for w in tokenize(user_text) if w not in STOP_WORDS]
+    phrases = get_key_phrases(query)
+    
+    scored = []
+    for doc in documents:
+        txt = doc[text_key].lower()
+        score = 0
+        if query.lower().strip() in txt:
+            score += 50
+        if user_text and len(user_text) > 2 and user_text.lower().strip() in txt:
+            score += 40
+        for p in phrases:
+            p_w = p.split()
+            if any(w not in STOP_WORDS for w in p_w) and p in txt:
+                score += 30
+        d_tokens = set(tokenize(doc[text_key]))
+        score += sum(3 for w in words if w in d_tokens)
+        score += sum(4 for w in user_words if w in d_tokens)
+        scored.append((score, doc))
+        
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [x[1] for x in scored[:top_k]]
 
 def call_openai_gpt(user_text, slide_key, custom_query=None, history_queries=None):
     query_target = custom_query if custom_query else user_text
     
     # 1. RETRIEVE TỰ ĐỘNG TOP SLIDES VÀ TRANSCRIPTS PHÙ HỢP NHẤT TỪ DỮ LIỆU THẬT
-    matched_slides = rank_documents(query_target, ALL_SLIDES, text_key='text', top_k=2)
-    matched_transcripts = rank_documents(query_target, ALL_TRANSCRIPTS, text_key='text', top_k=2)
+    active_slide = None
+    if slide_key == 'd1':
+        active_slide = next((s for s in ALL_SLIDES if s['source_file'] == 'd1-slide-hackathon.pdf' and s['page_index'] == 8), None)
+    elif slide_key == 'd2':
+        active_slide = next((s for s in ALL_SLIDES if s['source_file'] == 'd2-slide-hackathon.pdf' and s['page_index'] == 20), None)
+    elif slide_key == 'd4':
+        active_slide = next((s for s in ALL_SLIDES if s['source_file'] == 'd4-slide-hackathon.pdf'), None)
+
+    ranked_slides = rank_documents(query_target, ALL_SLIDES, user_text=user_text, text_key='text', top_k=2)
+    matched_slides = []
+    if active_slide:
+        matched_slides.append(active_slide)
+    for s in ranked_slides:
+        if s not in matched_slides:
+            matched_slides.append(s)
+    matched_slides = matched_slides[:3]
+
+    matched_transcripts = rank_documents(query_target, ALL_TRANSCRIPTS, user_text=user_text, text_key='text', top_k=4)
     
     # Đóng gói ngữ cảnh bài giảng cho LLM
     context_blocks = []
@@ -249,7 +293,7 @@ QUY TẮC BẮT BUỘC VỀ NỘI DUNG VÀ TRÍCH NGUỒN:
             parsed['is_out_of_scope'] = True
             # Nếu là PPO được lưu ý trên slide thì giữ lại citation để đối soát
             if 'ppo' in summary_lower or 'proximal policy optimization' in summary_lower:
-                parsed['citation'] = parsed.get('citation') or f"Slide [{current_k['slide_file']}] · {current_k['page']} (Ghi chú phạm vi bài học)"
+                parsed['citation'] = parsed.get('citation') or "Slide [d1-slide-hackathon.pdf] · Trang 8 (Ghi chú phạm vi bài học)"
             else:
                 parsed['citation'] = None
             parsed['option_a'] = None
@@ -290,11 +334,28 @@ class VLearnHandler(SimpleHTTPRequestHandler):
 
             # Server Guardrail: Lọc các ký tự bôi đen rác, mũi tên, dấu chấm phẩy hoặc quá ngắn (< 3 ký tự)
             import re
-            target_eval = custom_query if custom_query else user_text
-            cleaned_eval = re.sub(r'[\s\-_–—>><=.,:;!?()\[\]{}]+', '', target_eval)
-            if len(target_eval) < 3 or len(cleaned_eval) < 2:
+            is_garbage = False
+            garbage_target = user_text if user_text else (custom_query or '')
+            
+            # Check user_text direct
+            if user_text:
+                cleaned_user = re.sub(r'[\s\-_–—>><=.,:;!?()\[\]{}]+', '', user_text)
+                if len(user_text) < 3 or len(cleaned_user) < 2:
+                    is_garbage = True
+                    garbage_target = user_text
+            # Check if custom_query wraps a garbage term:
+            if custom_query:
+                m = re.match(r'^Giải thích khái niệm [\'"]?(.*?)[\'"]? trong bài học$', custom_query, re.IGNORECASE)
+                if m:
+                    extracted = m.group(1).strip()
+                    cleaned_ext = re.sub(r'[\s\-_–—>><=.,:;!?()\[\]{}]+', '', extracted)
+                    if len(extracted) < 3 or len(cleaned_ext) < 2:
+                        is_garbage = True
+                        garbage_target = extracted
+
+            if is_garbage:
                 ai_res = {
-                    "summary": f'Nội dung "{target_eval}" quá ngắn hoặc không phải là một câu hỏi/thuật ngữ hoàn chỉnh. Bạn hãy nhập một câu hỏi rõ ràng hoặc bôi đen trọn vẹn một cụm từ trên slide để AI giải thích nhé!',
+                    "summary": f'Nội dung "{garbage_target}" quá ngắn hoặc không phải là một câu hỏi/thuật ngữ hoàn chỉnh. Bạn hãy nhập một câu hỏi rõ ràng hoặc bôi đen trọn vẹn một cụm từ trên slide để AI giải thích nhé!',
                     "citation": None,
                     "next_concept": None,
                     "option_a": None,
