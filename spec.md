@@ -104,7 +104,7 @@ Loại: [x] Tối ưu tính năng có sẵn  [ ] Tính năng mới
   2. *Source Grounding (Độ chính xác nguồn):* 100% câu hỏi nội dung phải có trích dẫn đúng tên file slide thật, số trang thật và mã đoạn transcript thật; triệt tiêu 100% ảo giác số trang (như trang 304, 957, 1077).
   3. *Socratic Interaction (Tính tương tác đa tầng):* 100% câu trả lời học thuật sinh ra đúng 2 lựa chọn đào sâu Option A và Option B.
   4. *Guardrail Efficiency (Hiệu quả lọc rác):* Chặn 100% ký tự rác trong thời gian $\le 10$ ms mà không tốn chi phí gọi LLM.
-- **Golden Set (Bộ 20 Test Cases chuẩn hóa trong `eval/run_full_evaluation_suite.py`):**
+- **Golden Set (Bộ 20 Test Cases chuẩn hóa trong [`eval/golden_set_20_cases.json`](file:///home/namphuong/Desktop/vin_lab/K4-3A-Day05-06-AI-Product-Hackathon/eval/golden_set_20_cases.json) và script [`eval/run_full_evaluation_suite.py`](file:///home/namphuong/Desktop/vin_lab/K4-3A-Day05-06-AI-Product-Hackathon/eval/run_full_evaluation_suite.py)):**
   - Gồm 20 test cases phủ trọn 5 nhóm lỗ hổng kiến trúc đối đầu trực diện với hệ thống cũ:
     - *Nhóm 1:* Ảo giác số trang & Metadata (4 cases).
     - *Nhóm 2:* Bức tường chữ & Phân tầng nhận thức (5 cases).
