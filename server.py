@@ -45,6 +45,30 @@ Transformer là bước ngoặt vì nó cho mô hình hiểu ngôn ngữ theo c�
 [T04-091] Giảng viên: Tóm lại buổi 1, các LLM hiện nay hoạt động trên nền tảng Transformer, dự đoán token tiếp theo, là nền móng kỹ thuật cho các mô hình sau đó như BERT và GPT.
 [T04-094] Giảng viên & Học viên: Transformer dùng cơ chế Attention nên xử lý song song được tất cả các từ, tối ưu hóa năng lực tính toán song song của GPU, giải quyết triệt để vấn đề long-term dependency và nghẽn cổ chai của RNN/LSTM.'''
     },
+    'd2': {
+        'page': 'Trang 52',
+        'title': 'Workflow patterns — Đủ cho hầu hết bài toán (Anthropic)',
+        'slide_file': 'd2-slide-hackathon.pdf',
+        'slide_text': '''Workflow patterns — đủ cho hầu hết bài toán
+— Ba mô hình cơ bản theo Anthropic · Building Effective Agents (2024)
+1. Prompt Chaining:
+In → LLM Call 1 → Gate → LLM Call 2 → LLM Call 3 → Out (Gate fail → Exit)
+Chia task thành chuỗi bước tuần tự, có gate kiểm tra giữa các bước. VD: Viết outline → check → viết bài.
+Ý nghĩa quyết định: đổi độ trễ lấy độ chính xác.
+2. Routing:
+In → Router → LLM Call 1 / LLM Call 2 / LLM Call 3 → Out
+Phân loại input → đưa vào nhánh chuyên biệt, tối ưu từng loại riêng. VD: CS query → FAQ / refund / kỹ thuật.
+Ý nghĩa quyết định: câu dễ đi model rẻ, câu khó đi model mạnh.
+3. Parallelization:
+In → LLM Call 1 / LLM Call 2 / LLM Call 3 → Aggregator → Out
+Chạy song song rồi tổng hợp (sectioning), hoặc chạy nhiều lần lấy vote. VD: Guardrail + response đồng thời.
+Ý nghĩa quyết định: vote để giảm rủi ro một đầu ra sai.
+NGUYÊN TẮC ANTHROPIC: Luôn ưu tiên giải pháp đơn giản nhất; chỉ tăng độ phức tạp khi thực sự cần thiết. 3 mô hình cơ bản đã đủ đáp ứng hầu hết bài toán thực tế.''',
+        'transcript_file': 'transcript-03-clean.md',
+        'transcript': '''[T03-131] Giảng viên: Đây là vài cái workflow pattern — dĩ nhiên trên thế giới cũng có nhiều — nói chung là những cái basic, các bạn có thể xem như những khối Lego block: gắn phần này với phần kia để ra được một hệ thống to hơn. Để mình ví dụ cái prompt chaining trước cho dễ. Ví dụ các bạn cần xử lý step by step: các bạn gọi cái tool call lấy dữ liệu... Đó là một cái chain liên tục: bạn xác định là cái này tôi cần gọi hai lần... tôi đủ thông tin rồi tôi mới đi xử lý.
+[T03-132] Giảng viên: Routing ở đây là một ví dụ khác nha... Bạn nhập một cái prompt... họ sẽ dùng routing: con này sẽ phân tích: tôi có thể đưa ra câu trả lời ngay lập tức, hay tôi phải đi một nhánh là tool call. Sau khi có kết luận thì tùy lựa chọn... câu hỏi về y tế thì đi nhánh chuyên y tế; hỏi về toán/vật lý đi hướng khác. Cái routing này thứ nhất giúp tiết kiệm chi phí và tiết kiệm thời gian cho người dùng; cái dễ cho theo logic dễ, cái khó dùng model kết hợp xoay vòng tool call.
+[T03-133] Giảng viên: Còn cái parallel thì có nhiều cách để xử lý... bất kỳ luồng nào mà thay vì gọi lần lượt các bạn có thể làm song song mà không ảnh hưởng kết quả thì nên dùng. Tuy nhiên luồng song song này sẽ đụng đến ông MLOps vì tốn bộ nhớ RAM, phải ngồi lại với nhau để tối ưu. Luôn ưu tiên giải pháp đơn giản nhất, đừng cố làm phức tạp vừa tốn kém vừa khó debug.'''
+    },
     'd4': {
         'page': 'Trang 55',
         'title': 'Kỹ thuật Delimiters & Cô Lập Dữ Liệu Input',
@@ -104,6 +128,7 @@ QUY TẮC PHẢN HỒI BẮT BUỘC:
    - CẤM TUYỆT ĐỐI chèn bất kỳ ký hiệu trích dẫn nào (như [Trang...], [Transcript...], [T04-...]) vào trong câu trả lời văn bản 'summary'. Toàn bộ thông tin nguồn CHỈ ĐƯỢC để trong trường 'citation'.
 3. TRÍCH DẪN XÁC MINH CHÍNH XÁC (Trường 'citation'):
    - BẮT BUỘC chỉ rõ chính xác Slide và Transcript chứa thông tin câu trả lời:
+     + Nếu câu hỏi về Workflow patterns / Prompt Chaining / Routing / Parallelization / Anthropic: trích dẫn "Slide [d2-slide-hackathon.pdf] · Trang 52 & Transcript [transcript-03-clean.md] · Đoạn [T03-131]".
      + Nếu câu hỏi về Delimiters/Context Bleed/Prompt Injection: trích dẫn "Slide [d4-slide-hackathon.pdf] · Trang 55 & Transcript [transcript-04-clean.md] · Đoạn [T-Delimiters]".
      + Nếu câu hỏi về Transformer/Attention/RNN/LSTM/Context rot: trích dẫn "Slide [d1-slide-hackathon.pdf] · Trang 8 & Transcript [transcript-04-clean.md] · Đoạn [T04-xxx]".
      + TUYỆT ĐỐI KHÔNG sinh số trang ảo không có thật.
