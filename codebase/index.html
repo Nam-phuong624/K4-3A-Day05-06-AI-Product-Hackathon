@@ -32,6 +32,7 @@
     <div class="slide-toolbar">
       <div class="slide-tabs">
         <button class="slide-tab-btn active" id="tab-d1" onclick="switchSlide('d1')">Day 01 · Trang 8 (Transformer)</button>
+        <button class="slide-tab-btn" id="tab-d2" onclick="switchSlide('d2')">Day 02 · Trang 52 (Workflow patterns)</button>
         <button class="slide-tab-btn" id="tab-d4" onclick="switchSlide('d4')">Day 04 · Trang 55 (Delimiters)</button>
       </div>
       <span style="color: var(--accent); font-weight: 600; font-size: 11px;">✨ Bôi đen chữ & THẢ CHUỘT để AI giải thích ngay</span>
@@ -66,6 +67,41 @@
             <button class="scenario-btn" onclick="autoSelectText('Transformer', 'd1')">1. Bôi đen "Transformer" (Khái niệm)</button>
             <button class="scenario-btn" onclick="autoSelectText('mỗi từ có thể nhìn sang những từ quan trọng khác trong cả câu', 'd1')">2. Bôi đen câu dài (Cụ thể)</button>
             <button class="scenario-btn" onclick="autoSelectText('Thuật toán PPO (Proximal Policy Optimization)', 'd1')">3. Bôi đen "PPO" (Guardrail ngoài bài)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE DAY 02 -->
+      <div class="slide-canvas" id="slide-canvas-d2" style="display: none;">
+        <div class="slide-num">[DAY 02 · 52 / 83]</div>
+        <h1 class="slide-h1">Workflow patterns — đủ cho hầu hết bài toán</h1>
+        <div style="font-size: 13px; color: #0284c7; font-weight: 600; margin-bottom: 12px;">
+          — Ba mô hình cơ bản theo Anthropic · Building Effective Agents (2024)
+        </div>
+        
+        <p class="slide-p">
+          <strong>1. Prompt Chaining:</strong> Chia task thành chuỗi bước tuần tự, có <em>gate</em> kiểm tra giữa các bước (VD: Viết outline → check → viết bài). Ý nghĩa: đổi độ trễ lấy độ chính xác.
+        </p>
+
+        <p class="slide-p">
+          <strong>2. Routing:</strong> Phân loại input → đưa vào nhánh chuyên biệt, tối ưu từng loại riêng (VD: CS query → FAQ / refund / kỹ thuật). Ý nghĩa: câu dễ đi model rẻ, câu khó đi model mạnh.
+        </p>
+
+        <p class="slide-p">
+          <strong>3. Parallelization:</strong> Chạy song song rồi tổng hợp (sectioning), hoặc chạy nhiều lần lấy vote (VD: Guardrail + response đồng thời). Ý nghĩa: vote để giảm rủi ro một đầu ra sai.
+        </p>
+
+        <p class="slide-p" style="color: #64748b; font-size: 12.5px; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+          <em>* NGUYÊN TẮC ANTHROPIC: Luôn ưu tiên giải pháp đơn giản nhất; chỉ tăng độ phức tạp khi thực sự cần thiết. 3 mô hình cơ bản đã đủ đáp ứng hầu hết bài toán thực tế.</em>
+        </p>
+
+        <div class="slide-actions">
+          <div class="slide-actions-title">Bấm nhanh kịch bản kiểm thử (Anthropic Workflow Patterns):</div>
+          <div class="action-btns">
+            <button class="scenario-btn" onclick="autoSelectText('Workflow patterns', 'd2')">1. Bôi đen "Workflow patterns"</button>
+            <button class="scenario-btn" onclick="autoSelectText('Prompt Chaining', 'd2')">2. Bôi đen "Prompt Chaining"</button>
+            <button class="scenario-btn" onclick="autoSelectText('Routing', 'd2')">3. Bôi đen "Routing"</button>
+            <button class="scenario-btn" onclick="autoSelectText('Parallelization', 'd2')">4. Bôi đen "Parallelization"</button>
           </div>
         </div>
       </div>

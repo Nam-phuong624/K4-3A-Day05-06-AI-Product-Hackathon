@@ -13,6 +13,12 @@ let activeSlide = 'd1';
       slide_text: "Transformer là bước ngoặt vì nó cho mô hình hiểu ngôn ngữ theo cách linh hoạt hơn: mỗi từ có thể nhìn sang những từ quan trọng khác trong cả câu nhờ cơ chế Attention, thay vì chỉ đi tuần tự từng bước → trở thành nền móng kỹ thuật cho GPT, BERT và toàn bộ làn sóng LLM sau đó.",
       transcript: "[T04-038] [T04-040] Giảng viên giải thích: Transformer ra đời từ bài báo Attention Is All You Need năm 2017. Thay vì lần lượt đọc và dịch tuần tự từng chữ một như RNN/LSTM gây nghẽn cổ chai, nó đọc cả cụm và dùng cơ chế Attention nhận diện các từ có liên quan trực tiếp đến nhau cùng một lúc trên GPU."
     },
+    d2: {
+      page: "Trang 52",
+      title: "Workflow patterns — Đủ cho hầu hết bài toán (Anthropic)",
+      slide_text: "Ba mô hình cơ bản theo Anthropic: 1. Prompt Chaining (chia task tuần tự có gate kiểm tra; đổi trễ lấy chính xác). 2. Routing (phân loại input; câu dễ đi model rẻ, câu khó đi model mạnh). 3. Parallelization (chạy song song rồi tổng hợp hoặc vote để giảm rủi ro). Nguyên tắc: Luôn ưu tiên giải pháp đơn giản nhất.",
+      transcript: "[T03-131] [T03-132] [T03-133] Giảng viên phân tích: Workflow pattern như khối Lego. Chaining xử lý từng bước chắc chắn. Routing giúp tiết kiệm chi phí và thời gian bằng cách điều hướng model nhỏ/lớn. Parallelization chạy song song nhưng cần lưu ý dung lượng RAM và phối hợp với MLOps."
+    },
     d4: {
       page: "Trang 55",
       title: "Kỹ thuật Delimiters & Cô Lập Dữ Liệu Input",
@@ -116,13 +122,19 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
     activeSlide = slideId;
     sessionHistoryQueries = [];
     document.getElementById('slide-canvas-d1').style.display = slideId === 'd1' ? 'block' : 'none';
+    document.getElementById('slide-canvas-d2').style.display = slideId === 'd2' ? 'block' : 'none';
     document.getElementById('slide-canvas-d4').style.display = slideId === 'd4' ? 'block' : 'none';
     document.getElementById('tab-d1').className = 'slide-tab-btn' + (slideId === 'd1' ? ' active' : '');
+    document.getElementById('tab-d2').className = 'slide-tab-btn' + (slideId === 'd2' ? ' active' : '');
     document.getElementById('tab-d4').className = 'slide-tab-btn' + (slideId === 'd4' ? ' active' : '');
     
-    document.getElementById('header-course-title').innerText = slideId === 'd1' 
-      ? 'AI In Action · Day 01: AI & LLM Foundation'
-      : 'AI In Action · Day 04: Prompt Engineering & Tool Calling';
+    if (slideId === 'd1') {
+      document.getElementById('header-course-title').innerText = 'AI In Action · Day 01: AI & LLM Foundation';
+    } else if (slideId === 'd2') {
+      document.getElementById('header-course-title').innerText = 'AI In Action · Day 02: Xác Định Bài Toán & Workflow Patterns';
+    } else {
+      document.getElementById('header-course-title').innerText = 'AI In Action · Day 04: Prompt Engineering & Tool Calling';
+    }
     
     lastProcessedSelection = "";
     showToast(`Đã chuyển sang ${SLIDE_KNOWLEDGE[slideId].page}`);
