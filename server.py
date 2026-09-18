@@ -300,6 +300,51 @@ QUY TẮC BẮT BUỘC VỀ NỘI DUNG VÀ TRÍCH NGUỒN:
             parsed['option_b'] = None
             parsed['next_concept'] = None
 
+        # Chuẩn bị source_snippets cho 1-Click Source Peek / Source Inspector
+        source_snippets = []
+        if parsed.get('citation'):
+            # 1. Slide snippet
+            selected_slide = matched_slides[0] if matched_slides else None
+            if matched_slides:
+                for s in matched_slides:
+                    p_label = s.get('page_label', '')
+                    p_idx = str(s.get('page_index', ''))
+                    if (p_label and p_label.lower() in parsed['citation'].lower()) or (p_idx and f"trang {p_idx}" in parsed['citation'].lower()):
+                        selected_slide = s
+                        break
+            if selected_slide:
+                txt = selected_slide['text'].strip()
+                if len(txt) > 360:
+                    txt = txt[:360].rsplit(' ', 1)[0] + '...'
+                source_snippets.append({
+                    "type": "slide",
+                    "source_file": selected_slide.get('source_file', ''),
+                    "page_label": selected_slide.get('page_label', ''),
+                    "page_index": selected_slide.get('page_index', 0),
+                    "title": selected_slide.get('title', ''),
+                    "snippet": txt
+                })
+
+            # 2. Transcript snippet
+            selected_trans = matched_transcripts[0] if matched_transcripts else None
+            if matched_transcripts:
+                for t in matched_transcripts:
+                    tag = t.get('tag', '')
+                    if tag and tag.lower() in parsed['citation'].lower():
+                        selected_trans = t
+                        break
+            if selected_trans:
+                txt = selected_trans['text'].strip()
+                if len(txt) > 420:
+                    txt = txt[:420].rsplit(' ', 1)[0] + '...'
+                source_snippets.append({
+                    "type": "transcript",
+                    "source_file": selected_trans.get('source_file', ''),
+                    "tag": selected_trans.get('tag', ''),
+                    "snippet": txt
+                })
+
+        parsed['source_snippets'] = source_snippets
         return parsed
 
 class VLearnHandler(SimpleHTTPRequestHandler):
