@@ -409,7 +409,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
     addMessage('ai', res.summary, true, res.citation, {
       concept: displayConcept,
       options: options
-    }, res.source_snippets || null);
+    }, res.source_snippets || null, res.highlight_evidence || null);
   }
 
   function escapeXmlTags(str) {
@@ -433,8 +433,8 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
     return c;
   }
 
-  // ĐỐI SOÁT NGUỒN: HIGHLIGHT TỪ KHÓA & CỤM TỪ LIÊN QUAN (CÓ TÍNH NGẮT QUÃNG)
-  function highlightGroundedSnippet(rawSnippet, query = "", summary = "") {
+  // ĐỐI SOÁT NGUỒN THÔNG MINH: SỬ DỤNG BẰNG CHỨNG NGỮ NGHĨA TỪ OPENAI GPT-4O-MINI
+  function highlightGroundedSnippet(rawSnippet, highlightEvidence = null, query = "", summary = "") {
     if (!rawSnippet) return "";
 
     let text = rawSnippet
@@ -445,118 +445,149 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
       .replace(/<context>/gi, '&lt;context&gt;')
       .replace(/<\/context>/gi, '&lt;/context&gt;');
 
-    const STOP_WORDS = new Set([
-      "là", "và", "của", "cho", "các", "những", "trong", "với", "được", "có", 
-      "này", "đó", "ra", "vào", "để", "từ", "theo", "sau", "khi", "bằng", 
-      "thì", "mà", "như", "nó", "bị", "bởi", "nên", "ở", "gì", "ai", 
-      "một", "hai", "ba", "bốn", "the", "a", "an", "is", "in", "at", "of", "to", "on"
-    ]);
+    let targetKeywords = [];
+    let evidencePhrases = [];
 
-    const DOMAIN_KEYWORDS = [
-      "Transformer", "Attention", "Self-Attention", "RNN", "LSTM", "Attention Is All You Need",
-      "Delimiters", "Prompt Injection", "Context Bleed", "Context Rot",
-      "Prompt Chaining", "Routing", "Parallelization", "Anthropic",
-      "PPO", "RLHF", "BERT", "GPT", "GPU", "MLOps",
-      "tuần tự", "song song", "nghẽn cổ chai", "bộ nhớ", "độ trễ", "chi phí",
-      "trọng số", "ma trận", "harness", "agent", "tool", "cô lập", "nhất quán",
-      "&lt;user_query&gt;", "&lt;instruction&gt;", "Lego", "RAM"
-    ];
+    // 1. ƯU TIÊN SỐ 1: BẰNG CHỨNG XÁC THỰC DO CHÍNH OPENAI TRÍCH XUẤT
+    if (highlightEvidence && typeof highlightEvidence === 'object') {
+      if (Array.isArray(highlightEvidence.keywords)) {
+        targetKeywords = highlightEvidence.keywords
+          .map(k => String(k).trim())
+          .filter(k => k.length >= 2);
+      }
+      if (Array.isArray(highlightEvidence.evidence_phrases)) {
+        evidencePhrases = highlightEvidence.evidence_phrases
+          .map(p => String(p).trim())
+          .filter(p => p.length >= 4);
+      }
+    }
 
-    const EVIDENCE_PHRASES = [
-      "hiểu ngôn ngữ theo cách linh hoạt hơn",
-      "nhìn sang những từ quan trọng khác trong cả câu",
-      "thay vì chỉ đi tuần tự từng bước",
-      "nền móng kỹ thuật cho GPT, BERT",
-      "bài báo Attention Is All You Need năm 2017",
-      "thay vì lần lượt đọc và dịch tuần tự từng chữ một",
-      "gây nghẽn cổ chai",
-      "đọc cả cụm",
-      "nhận diện các từ có liên quan trực tiếp đến nhau cùng một lúc trên GPU",
-      "chia task tuần tự có gate kiểm tra",
-      "đổi trễ lấy chính xác",
-      "phân loại input; câu dễ đi model rẻ, câu khó đi model mạnh",
-      "chạy song song rồi tổng hợp hoặc vote để giảm rủi ro",
-      "ưu tiên giải pháp đơn giản nhất",
-      "như khối Lego",
-      "tiết kiệm chi phí và thời gian",
-      "phối hợp với MLOps",
-      "Bao bọc mọi dữ liệu từ User, API responses, hoặc DB queries",
-      "các thẻ định danh rõ ràng",
-      "Chỉ xử lý văn bản nằm trong thẻ",
-      "Duy trì đồng nhất một loại thẻ phân tách xuyên suốt toàn bộ prompt",
-      "phòng vệ lớp 1 để chống Prompt Injection và Context Bleed",
-      "tách bạch rõ ràng giữa chỉ thị hệ thống và dữ liệu thô",
-      "tăng độ ổn định hành vi của Agent",
-      "quản lý vòng lặp giữa Agent và Tool",
-      "kiểm soát trạng thái an toàn",
-      "tràn bộ nhớ khi chạy tool loop"
-    ];
-
-    // Extract query keywords
-    const cleanQuery = query.replace(/[^\p{L}\p{N}_&;]/gu, " ");
-    const qTokens = cleanQuery.split(/\s+/).filter(w => w.length >= 2 && !STOP_WORDS.has(w.toLowerCase()));
-
-    // Extract dynamic n-grams from query and summary
-    const phraseSet = new Set(EVIDENCE_PHRASES);
-    const contextWords = (query + " " + summary).replace(/[^\p{L}\p{N}_]/gu, " ").split(/\s+/).filter(w => w.length > 0);
-    for (let i = 0; i < contextWords.length - 1; i++) {
-      const w1 = contextWords[i].toLowerCase();
-      const w2 = contextWords[i + 1].toLowerCase();
-      if (!STOP_WORDS.has(w1) && !STOP_WORDS.has(w2)) {
-        const bi = contextWords[i] + " " + contextWords[i + 1];
-        if (bi.length >= 6 && text.toLowerCase().includes(bi.toLowerCase())) {
-          phraseSet.add(bi);
+    // 2. NẾU THIẾU BẰNG CHỨNG HOẶC CHẠY CHẾ ĐỘ SIMULATOR: DÙNG BỘ CỤM TỪ BẰNG CHỨNG NGUYÊN VĂN
+    if (evidencePhrases.length === 0) {
+      const FALLBACK_PHRASES = [
+        "hiểu ngôn ngữ theo cách linh hoạt hơn",
+        "nhìn sang những từ quan trọng khác trong cả câu",
+        "thay vì chỉ đi tuần tự từng bước",
+        "nền móng kỹ thuật cho GPT, BERT",
+        "Attention Is All You Need",
+        "thay vì lần lượt đọc và dịch tuần tự từng chữ một",
+        "gây nghẽn cổ chai",
+        "đọc cả cụm",
+        "nhận diện các từ có liên quan trực tiếp đến nhau cùng một lúc trên GPU",
+        "recurrent neural network ( RNN )",
+        "recurrent neural network",
+        "đọc từng chữ một, xử lý từng chữ một, cứ nối tiếp nhau như vậy",
+        "đọc từng chữ một, xử lý từng chữ một",
+        "khi đến câu rất dài thì nó sẽ quên những cái ở đầu",
+        "khi đến câu rất dài thì nó sẽ quên",
+        "chia task tuần tự có gate kiểm tra",
+        "đổi trễ lấy chính xác",
+        "câu dễ đi model rẻ, câu khó đi model mạnh",
+        "chạy song song rồi tổng hợp hoặc vote để giảm rủi ro",
+        "ưu tiên giải pháp đơn giản nhất",
+        "tiết kiệm chi phí và thời gian",
+        "Bao bọc mọi dữ liệu từ User, API responses, hoặc DB queries",
+        "các thẻ định danh rõ ràng",
+        "Chỉ xử lý văn bản nằm trong thẻ",
+        "Duy trì đồng nhất một loại thẻ phân tách xuyên suốt toàn bộ prompt",
+        "phòng vệ lớp 1 để chống Prompt Injection và Context Bleed",
+        "tách bạch rõ ràng giữa chỉ thị hệ thống và dữ liệu thô",
+        "tăng độ ổn định hành vi của Agent",
+        "quản lý vòng lặp giữa Agent và Tool",
+        "kiểm soát trạng thái an toàn",
+        "tràn bộ nhớ khi chạy tool loop"
+      ];
+      for (const fp of FALLBACK_PHRASES) {
+        if (text.toLowerCase().includes(fp.toLowerCase())) {
+          evidencePhrases.push(fp);
         }
       }
     }
 
-    const allKeywords = Array.from(new Set([...DOMAIN_KEYWORDS, ...qTokens]));
-    const allPhrases = Array.from(phraseSet).sort((a, b) => b.length - a.length);
+    // 3. TỪ KHÓA ĐỐI CHIẾU: TUYỆT ĐỐI DÙNG TỪ GHÉP / THỰC THỂ HOÀN CHỈNH (KHÔNG BĂM LẺ ÂM TIẾT)
+    if (targetKeywords.length === 0) {
+      const DOMAIN_COMPOUNDS = [
+        "mô hình xử lý ngôn ngữ truyền thống", "mô hình truyền thống",
+        "mạng neuron hồi tiếp", "mạng neuron", "mô hình ngôn ngữ",
+        "Transformer", "Attention", "Self-Attention", "RNN", "LSTM",
+        "Delimiters", "Prompt Injection", "Context Bleed", "Context Rot",
+        "Prompt Chaining", "Routing", "Parallelization", "Anthropic",
+        "PPO", "RLHF", "BERT", "GPT", "GPU", "MLOps",
+        "tuần tự", "song song", "nghẽn cổ chai", "bộ nhớ", "độ trễ", "chi phí",
+        "trọng số", "ma trận", "harness", "agent", "tool", "cô lập", "nhất quán",
+        "&lt;user_query&gt;", "&lt;instruction&gt;", "Lego", "RAM"
+      ];
+      for (const kw of DOMAIN_COMPOUNDS) {
+        if (text.toLowerCase().includes(kw.toLowerCase())) {
+          targetKeywords.push(kw);
+        }
+      }
+      if (query && query.trim().length >= 3) {
+        targetKeywords.push(query.trim());
+      }
+    }
 
-    // Interval tag tracking: 0 = none, 1 = phrase, 2 = keyword
-    const tags = new Uint8Array(text.length);
+    // SẮP XẾP ĐỘ DÀI GIẢM DẦN ĐỂ ƯU TIÊN CỤM TỪ DÀI VÀ TRỌN VẸN
+    const sortedPhrases = Array.from(new Set(evidencePhrases)).sort((a, b) => b.length - a.length);
+    const sortedKeywords = Array.from(new Set(targetKeywords)).sort((a, b) => b.length - a.length);
 
-    // Mark phrases
-    for (const phrase of allPhrases) {
+    const tags = new Uint8Array(text.length); // 0: none, 1: phrase (blue), 2: kw (yellow)
+
+    // Bước 1: Đánh dấu cụm bằng chứng (Evidence Phrases)
+    for (const phrase of sortedPhrases) {
       if (!phrase || phrase.length < 4) continue;
-      const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const regex = new RegExp(escaped, "gui");
-      let match;
-      while ((match = regex.exec(text)) !== null) {
-        for (let i = match.index; i < match.index + match[0].length; i++) {
-          if (tags[i] === 0) tags[i] = 1;
+      const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+      try {
+        const regex = new RegExp(escaped, "gui");
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+          for (let i = match.index; i < match.index + match[0].length; i++) {
+            tags[i] = 1;
+          }
         }
-      }
+      } catch (e) {}
     }
 
-    // Mark keywords (overrides phrase tag for the specific keyword characters)
-    for (const kw of allKeywords) {
+    // Bước 2: Đánh dấu từ khóa cốt lõi (Keywords) - Chỉ bôi vàng độc lập khi không nằm trong phrase
+    for (const kw of sortedKeywords) {
       if (!kw || kw.length < 2) continue;
       const isXmlEntity = kw.startsWith("&lt;");
-      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const regex = isXmlEntity
-        ? new RegExp(escaped, "gui")
-        : new RegExp("(^|[^\\p{L}\\p{N}_])(" + escaped + ")(?=[^\\p{L}\\p{N}_]|$)", "gui");
+      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+      try {
+        const regex = isXmlEntity
+          ? new RegExp(escaped, "gui")
+          : new RegExp("(^|[^\\p{L}\\p{N}_])(" + escaped + ")(?=[^\\p{L}\\p{N}_]|$)", "gui");
 
-      let match;
-      while ((match = regex.exec(text)) !== null) {
-        const start = isXmlEntity ? match.index : match.index + match[1].length;
-        const end = isXmlEntity ? match.index + match[0].length : start + match[2].length;
-        for (let i = start; i < end; i++) {
-          tags[i] = 2;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+          const start = isXmlEntity ? match.index : match.index + match[1].length;
+          const end = isXmlEntity ? match.index + match[0].length : start + match[2].length;
+
+          // Kiểm tra xem có nằm trọn vẹn trong một phrase đã được bôi xanh không
+          let isInsidePhrase = false;
+          for (let i = start; i < end; i++) {
+            if (tags[i] === 1) isInsidePhrase = true;
+          }
+
+          // Tránh hiệu ứng bàn cờ: nếu chưa bôi xanh thì bôi vàng độc lập
+          if (!isInsidePhrase) {
+            for (let i = start; i < end; i++) {
+              tags[i] = 2;
+            }
+          }
         }
-      }
+      } catch (e) {}
     }
 
-    // Build rendered HTML string with <mark> tags
+    // Bước 3: Lắp ráp HTML với <mark> tags chuẩn mực, không rách vỡ chữ
     const out = [];
     let currentTag = 0;
     for (let i = 0; i < text.length; i++) {
       const t = tags[i];
       if (t !== currentTag) {
         if (currentTag !== 0) out.push("</mark>");
-        if (t === 1) out.push("<mark class=\"highlight-phrase\">");
-        else if (t === 2) out.push("<mark class=\"highlight-kw\">");
+        if (t === 1) out.push('<mark class="highlight-phrase">');
+        else if (t === 2) out.push('<mark class="highlight-kw">');
         currentTag = t;
       }
       out.push(text[i]);
@@ -566,7 +597,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
     return out.join("");
   }
 
-  function addMessage(sender, text, isProgressive = false, citation = null, deepDiveData = null, sourceSnippets = null) {
+  function addMessage(sender, text, isProgressive = false, citation = null, deepDiveData = null, sourceSnippets = null, highlightEvidence = null) {
     const chatBox = document.getElementById('chat-box') || document.getElementById('chat-messages');
     if (!chatBox) return;
     const msgDiv = document.createElement('div');
@@ -629,7 +660,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
 
       if (sourceSnippets && sourceSnippets.length > 0) {
         sourceSnippets.forEach(s => {
-          const highlightedSnippet = highlightGroundedSnippet(s.snippet, currentActiveQuery || currentSelection || '', cleanText);
+          const highlightedSnippet = highlightGroundedSnippet(s.snippet, highlightEvidence, currentActiveQuery || currentSelection || '', cleanText);
           if (s.type === 'slide') {
             const isSwitchable = s.source_file && (s.source_file.includes('d1') || s.source_file.includes('d2') || s.source_file.includes('d4'));
             const targetSlideKey = s.source_file && s.source_file.includes('d4') ? 'd4' : (s.source_file && s.source_file.includes('d2') ? 'd2' : 'd1');
@@ -659,7 +690,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
         });
       } else {
         // Fallback trích đoạn từ citation chuỗi
-        const fallbackHighlighted = highlightGroundedSnippet(citation, currentActiveQuery || currentSelection || '', cleanText);
+        const fallbackHighlighted = highlightGroundedSnippet(citation, highlightEvidence, currentActiveQuery || currentSelection || '', cleanText);
         snippetsHTML += `
           <div class="source-snippet-card fallback-card">
             <div class="source-card-header">
@@ -783,7 +814,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
                 }
               }
 
-              addMessage('ai', data.summary, true, data.citation || null, nextDeepDive, data.source_snippets || null);
+              addMessage('ai', data.summary, true, data.citation || null, nextDeepDive, data.source_snippets || null, data.highlight_evidence || null);
               return;
             }
           } catch (err) {
@@ -854,7 +885,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
               }
             }
 
-            addMessage('ai', data.summary, true, data.citation || null, nextDeepDive, data.source_snippets || null);
+            addMessage('ai', data.summary, true, data.citation || null, nextDeepDive, data.source_snippets || null, data.highlight_evidence || null);
             return;
           }
         } catch (err) {
@@ -951,7 +982,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
           }
         }
 
-        addMessage('ai', data.summary, true, data.citation || null, nextDeepDive, data.source_snippets || null);
+        addMessage('ai', data.summary, true, data.citation || null, nextDeepDive, data.source_snippets || null, data.highlight_evidence || null);
         return;
       }
     } catch (err) {
