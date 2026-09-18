@@ -50,9 +50,12 @@ def init_knowledge_base():
                         
                         # Bổ sung chi tiết giải thích cho Slide 8 về phân biệt BERT (hiểu 2 chiều) và GPT (sinh tuần tự)
                         if f == 'd1-slide-hackathon.pdf' and (i + 1) == 8:
-                            txt += """
+                            txt = """2017: Transformer & Cơ chế Tự chú ý
+Trước năm 2017, các mô hình xử lý ngôn ngữ truyền thống như RNN hoặc LSTM xử lý dữ liệu theo chuỗi tuần tự từng từ một, dẫn đến hiện tượng nghẽn cổ chai và khó huấn luyện song song.
+Transformer là bước ngoặt vì nó cho mô hình hiểu ngôn ngữ theo cách linh hoạt hơn: mỗi từ có thể nhìn sang những từ quan trọng khác trong cả câu nhờ cơ chế Attention (Tự chú ý), thay vì chỉ đi tuần tự từng bước → trở thành nền móng kỹ thuật cốt lõi cho GPT, BERT và toàn bộ làn sóng LLM hiện đại.
 - BERT: Mô hình hiểu ngôn ngữ hai chiều (bidirectional), nhìn toàn cảnh ngữ cảnh cả hai phía của từ để phân tích ý nghĩa và trích xuất đặc trưng.
-- GPT: Mô hình sinh văn bản (generative), hoạt động theo chiều từ trái sang phải dự đoán tuần tự token tiếp theo."""
+- GPT: Mô hình sinh văn bản (generative), hoạt động theo chiều từ trái sang phải dự đoán tuần tự token tiếp theo.
+* Lưu ý: Thuật toán PPO (Proximal Policy Optimization) thuộc bài học RLHF chuyên sâu, không có trong nội dung bài học Day 1 này."""
 
                         ALL_SLIDES.append({
                             'source_file': f,
@@ -121,7 +124,7 @@ def get_key_phrases(text):
         phrases.append(words[i] + ' ' + words[i+1] + ' ' + words[i+2])
     return phrases
 
-def rank_documents(query, documents, user_text='', text_key='text', top_k=3):
+def rank_documents(query, documents, user_text='', text_key='text', top_k=3, preferred_source=None):
     words = [w for w in tokenize(query) if w not in STOP_WORDS]
     user_words = [w for w in tokenize(user_text) if w not in STOP_WORDS]
     phrases = get_key_phrases(query)
@@ -130,6 +133,8 @@ def rank_documents(query, documents, user_text='', text_key='text', top_k=3):
     for doc in documents:
         txt = doc[text_key].lower()
         score = 0
+        if preferred_source and doc.get('source_file') == preferred_source:
+            score += 25
         if query.lower().strip() in txt:
             score += 50
         if user_text and len(user_text) > 2 and user_text.lower().strip() in txt:
@@ -151,12 +156,16 @@ def call_openai_gpt(user_text, slide_key, custom_query=None, history_queries=Non
     
     # 1. RETRIEVE TỰ ĐỘNG TOP SLIDES VÀ TRANSCRIPTS PHÙ HỢP NHẤT TỪ DỮ LIỆU THẬT
     active_slide = None
+    preferred_transcript = None
     if slide_key == 'd1':
         active_slide = next((s for s in ALL_SLIDES if s['source_file'] == 'd1-slide-hackathon.pdf' and s['page_index'] == 8), None)
+        preferred_transcript = 'transcript-04-clean.md'
     elif slide_key == 'd2':
         active_slide = next((s for s in ALL_SLIDES if s['source_file'] == 'd2-slide-hackathon.pdf' and s['page_index'] == 20), None)
+        preferred_transcript = 'transcript-03-clean.md'
     elif slide_key == 'd4':
         active_slide = next((s for s in ALL_SLIDES if s['source_file'] == 'd4-slide-hackathon.pdf'), None)
+        preferred_transcript = 'transcript-04-clean.md'
 
     ranked_slides = rank_documents(query_target, ALL_SLIDES, user_text=user_text, text_key='text', top_k=2)
     matched_slides = []
@@ -167,7 +176,9 @@ def call_openai_gpt(user_text, slide_key, custom_query=None, history_queries=Non
             matched_slides.append(s)
     matched_slides = matched_slides[:3]
 
-    matched_transcripts = rank_documents(query_target, ALL_TRANSCRIPTS, user_text=user_text, text_key='text', top_k=4)
+    matched_transcripts = rank_documents(
+        query_target, ALL_TRANSCRIPTS, user_text=user_text, text_key='text', top_k=4, preferred_source=preferred_transcript
+    )
     
     # Đóng gói ngữ cảnh bài giảng cho LLM
     context_blocks = []
@@ -187,10 +198,11 @@ Lời giảng:
     if history_queries and len(history_queries) > 0:
         history_list_str = "\n".join([f"- {q}" for q in history_queries[-6:]])
         history_instruction = f"""
-QUY TẮC CHỐNG LẶP CÂU HỎI (ANTI-REPETITION):
-- Các câu hỏi đã xuất hiện trong phiên học trước đó:
+QUY TẮC CHỐNG LẶP CÂU HỎI (ANTI-REPETITION CHO OPTION_A & OPTION_B):
+- VỀ CÂU TRẢ LỜI 'summary': Học viên có quyền hỏi lại, hỏi tiếp hoặc làm rõ bất kỳ câu hỏi hay chủ đề nào (kể cả các câu đã hỏi trước đó). Bạn LUÔN LUÔN giải thích đầy đủ, tận tình và trực diện câu hỏi hiện tại trong 'summary'. TUYỆT ĐỐI KHÔNG từ chối trả lời câu hỏi của học viên!
+- VỀ 2 CÂU HỎI GỢI MỞ ĐÀO SÂU ('option_a', 'option_b'): TUYỆT ĐỐI CẤM lặp lại hoặc diễn đạt lại các câu hỏi đã xuất hiện trong danh sách sau:
 {history_list_str}
-- TUYỆT ĐỐI CẤM lặp lại hoặc diễn đạt lại bất kỳ câu hỏi nào trong danh sách trên!
+Hãy sáng tạo 2 câu hỏi gợi mở mới mẻ theo góc nhìn khác để kích thích tư duy của học viên!
 """
 
     system_prompt = f"""Bạn là VLearn AI Tutor thông minh của VinUni.
