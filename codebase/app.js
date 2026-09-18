@@ -1,6 +1,7 @@
 let activeSlide = 'd1';
   let currentSelection = "";
   let lastProcessedSelection = "";
+  let currentActiveQuery = "";
   let sessionHistoryQueries = [];
   const preview = document.getElementById('selection-preview');
   const toast = document.getElementById('auto-toast');
@@ -161,6 +162,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
         if (selectedText === lastProcessedSelection) return;
         lastProcessedSelection = selectedText;
         currentSelection = selectedText;
+        currentActiveQuery = selectedText;
         if (preview) {
           preview.innerText = `"${selectedText}" (${selectedText.length} ký tự)`;
         }
@@ -180,6 +182,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
     if (activeSlide !== slideId) switchSlide(slideId);
     lastProcessedSelection = text;
     currentSelection = text;
+    currentActiveQuery = text;
     preview.innerText = `"${text}" (${text.length} ký tự)`;
     processSelectionWithAI(text);
   }
@@ -430,6 +433,139 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
     return c;
   }
 
+  // ĐỐI SOÁT NGUỒN: HIGHLIGHT TỪ KHÓA & CỤM TỪ LIÊN QUAN (CÓ TÍNH NGẮT QUÃNG)
+  function highlightGroundedSnippet(rawSnippet, query = "", summary = "") {
+    if (!rawSnippet) return "";
+
+    let text = rawSnippet
+      .replace(/<user_query>/gi, '&lt;user_query&gt;')
+      .replace(/<\/user_query>/gi, '&lt;/user_query&gt;')
+      .replace(/<instruction>/gi, '&lt;instruction&gt;')
+      .replace(/<\/instruction>/gi, '&lt;/instruction&gt;')
+      .replace(/<context>/gi, '&lt;context&gt;')
+      .replace(/<\/context>/gi, '&lt;/context&gt;');
+
+    const STOP_WORDS = new Set([
+      "là", "và", "của", "cho", "các", "những", "trong", "với", "được", "có", 
+      "này", "đó", "ra", "vào", "để", "từ", "theo", "sau", "khi", "bằng", 
+      "thì", "mà", "như", "nó", "bị", "bởi", "nên", "ở", "gì", "ai", 
+      "một", "hai", "ba", "bốn", "the", "a", "an", "is", "in", "at", "of", "to", "on"
+    ]);
+
+    const DOMAIN_KEYWORDS = [
+      "Transformer", "Attention", "Self-Attention", "RNN", "LSTM", "Attention Is All You Need",
+      "Delimiters", "Prompt Injection", "Context Bleed", "Context Rot",
+      "Prompt Chaining", "Routing", "Parallelization", "Anthropic",
+      "PPO", "RLHF", "BERT", "GPT", "GPU", "MLOps",
+      "tuần tự", "song song", "nghẽn cổ chai", "bộ nhớ", "độ trễ", "chi phí",
+      "trọng số", "ma trận", "harness", "agent", "tool", "cô lập", "nhất quán",
+      "&lt;user_query&gt;", "&lt;instruction&gt;", "Lego", "RAM"
+    ];
+
+    const EVIDENCE_PHRASES = [
+      "hiểu ngôn ngữ theo cách linh hoạt hơn",
+      "nhìn sang những từ quan trọng khác trong cả câu",
+      "thay vì chỉ đi tuần tự từng bước",
+      "nền móng kỹ thuật cho GPT, BERT",
+      "bài báo Attention Is All You Need năm 2017",
+      "thay vì lần lượt đọc và dịch tuần tự từng chữ một",
+      "gây nghẽn cổ chai",
+      "đọc cả cụm",
+      "nhận diện các từ có liên quan trực tiếp đến nhau cùng một lúc trên GPU",
+      "chia task tuần tự có gate kiểm tra",
+      "đổi trễ lấy chính xác",
+      "phân loại input; câu dễ đi model rẻ, câu khó đi model mạnh",
+      "chạy song song rồi tổng hợp hoặc vote để giảm rủi ro",
+      "ưu tiên giải pháp đơn giản nhất",
+      "như khối Lego",
+      "tiết kiệm chi phí và thời gian",
+      "phối hợp với MLOps",
+      "Bao bọc mọi dữ liệu từ User, API responses, hoặc DB queries",
+      "các thẻ định danh rõ ràng",
+      "Chỉ xử lý văn bản nằm trong thẻ",
+      "Duy trì đồng nhất một loại thẻ phân tách xuyên suốt toàn bộ prompt",
+      "phòng vệ lớp 1 để chống Prompt Injection và Context Bleed",
+      "tách bạch rõ ràng giữa chỉ thị hệ thống và dữ liệu thô",
+      "tăng độ ổn định hành vi của Agent",
+      "quản lý vòng lặp giữa Agent và Tool",
+      "kiểm soát trạng thái an toàn",
+      "tràn bộ nhớ khi chạy tool loop"
+    ];
+
+    // Extract query keywords
+    const cleanQuery = query.replace(/[^\p{L}\p{N}_&;]/gu, " ");
+    const qTokens = cleanQuery.split(/\s+/).filter(w => w.length >= 2 && !STOP_WORDS.has(w.toLowerCase()));
+
+    // Extract dynamic n-grams from query and summary
+    const phraseSet = new Set(EVIDENCE_PHRASES);
+    const contextWords = (query + " " + summary).replace(/[^\p{L}\p{N}_]/gu, " ").split(/\s+/).filter(w => w.length > 0);
+    for (let i = 0; i < contextWords.length - 1; i++) {
+      const w1 = contextWords[i].toLowerCase();
+      const w2 = contextWords[i + 1].toLowerCase();
+      if (!STOP_WORDS.has(w1) && !STOP_WORDS.has(w2)) {
+        const bi = contextWords[i] + " " + contextWords[i + 1];
+        if (bi.length >= 6 && text.toLowerCase().includes(bi.toLowerCase())) {
+          phraseSet.add(bi);
+        }
+      }
+    }
+
+    const allKeywords = Array.from(new Set([...DOMAIN_KEYWORDS, ...qTokens]));
+    const allPhrases = Array.from(phraseSet).sort((a, b) => b.length - a.length);
+
+    // Interval tag tracking: 0 = none, 1 = phrase, 2 = keyword
+    const tags = new Uint8Array(text.length);
+
+    // Mark phrases
+    for (const phrase of allPhrases) {
+      if (!phrase || phrase.length < 4) continue;
+      const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(escaped, "gui");
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        for (let i = match.index; i < match.index + match[0].length; i++) {
+          if (tags[i] === 0) tags[i] = 1;
+        }
+      }
+    }
+
+    // Mark keywords (overrides phrase tag for the specific keyword characters)
+    for (const kw of allKeywords) {
+      if (!kw || kw.length < 2) continue;
+      const isXmlEntity = kw.startsWith("&lt;");
+      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = isXmlEntity
+        ? new RegExp(escaped, "gui")
+        : new RegExp("(^|[^\\p{L}\\p{N}_])(" + escaped + ")(?=[^\\p{L}\\p{N}_]|$)", "gui");
+
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        const start = isXmlEntity ? match.index : match.index + match[1].length;
+        const end = isXmlEntity ? match.index + match[0].length : start + match[2].length;
+        for (let i = start; i < end; i++) {
+          tags[i] = 2;
+        }
+      }
+    }
+
+    // Build rendered HTML string with <mark> tags
+    const out = [];
+    let currentTag = 0;
+    for (let i = 0; i < text.length; i++) {
+      const t = tags[i];
+      if (t !== currentTag) {
+        if (currentTag !== 0) out.push("</mark>");
+        if (t === 1) out.push("<mark class=\"highlight-phrase\">");
+        else if (t === 2) out.push("<mark class=\"highlight-kw\">");
+        currentTag = t;
+      }
+      out.push(text[i]);
+    }
+    if (currentTag !== 0) out.push("</mark>");
+
+    return out.join("");
+  }
+
   function addMessage(sender, text, isProgressive = false, citation = null, deepDiveData = null, sourceSnippets = null) {
     const chatBox = document.getElementById('chat-box') || document.getElementById('chat-messages');
     if (!chatBox) return;
@@ -481,6 +617,10 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
           <div class="inspector-title-wrap">
             <div class="inspector-title">🎯 1-CLICK SOURCE PEEK · ĐỐI SOÁT NGUỒN GỐC</div>
             <div class="inspector-desc">Trích đoạn nguyên văn từ bài giảng được AI tham chiếu để sinh câu trả lời:</div>
+            <div class="inspector-legend">
+              <span class="legend-item"><mark class="highlight-kw">Từ khóa đối chiếu</mark></span>
+              <span class="legend-item"><mark class="highlight-phrase">Cụm từ liên quan trực tiếp</mark></span>
+            </div>
           </div>
           <button class="inspector-close-btn" title="Đóng đối soát">✕</button>
         </div>
@@ -489,6 +629,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
 
       if (sourceSnippets && sourceSnippets.length > 0) {
         sourceSnippets.forEach(s => {
+          const highlightedSnippet = highlightGroundedSnippet(s.snippet, currentActiveQuery || currentSelection || '', cleanText);
           if (s.type === 'slide') {
             const isSwitchable = s.source_file && (s.source_file.includes('d1') || s.source_file.includes('d2') || s.source_file.includes('d4'));
             const targetSlideKey = s.source_file && s.source_file.includes('d4') ? 'd4' : (s.source_file && s.source_file.includes('d2') ? 'd2' : 'd1');
@@ -501,7 +642,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
                   ${isSwitchable ? `<button class="jump-slide-btn" data-target="${targetSlideKey}" title="Chuyển ngay màn hình sang Slide này">⚡ Mở Slide này</button>` : ''}
                 </div>
                 ${s.title ? `<div class="source-card-title">${escapeXmlTags(s.title)}</div>` : ''}
-                <div class="source-card-text">"${escapeXmlTags(s.snippet)}"</div>
+                <div class="source-card-text">"${highlightedSnippet}"</div>
               </div>
             `;
           } else if (s.type === 'transcript') {
@@ -511,19 +652,20 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
                   <span class="source-card-type">🎙️ LỜI GIẢNG GIẢNG VIÊN</span>
                   <span class="source-card-tag">${escapeXmlTags(s.source_file)}${s.tag ? ' · Đoạn [' + escapeXmlTags(s.tag) + ']' : ''}</span>
                 </div>
-                <div class="source-card-text transcript-text">"${escapeXmlTags(s.snippet)}"</div>
+                <div class="source-card-text transcript-text">"${highlightedSnippet}"</div>
               </div>
             `;
           }
         });
       } else {
         // Fallback trích đoạn từ citation chuỗi
+        const fallbackHighlighted = highlightGroundedSnippet(citation, currentActiveQuery || currentSelection || '', cleanText);
         snippetsHTML += `
           <div class="source-snippet-card fallback-card">
             <div class="source-card-header">
               <span class="source-card-type">📑 THÔNG TIN TRÍCH DẪN</span>
             </div>
-            <div class="source-card-text">${escapeXmlTags(citation)}</div>
+            <div class="source-card-text">${fallbackHighlighted}</div>
           </div>
         `;
       }
@@ -605,6 +747,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
         btn.innerText = opt.label;
         btn.onclick = async () => {
           sessionHistoryQueries.push(opt.label);
+          currentActiveQuery = opt.label;
           addMessage('user', opt.label);
           setDecision('Đào sâu gợi ý', 'Gọi GPT-4o-mini (Live API)', 'active');
           const startTime = performance.now();
@@ -671,6 +814,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
         const query = customInput.value.trim();
         if (!query) return;
         sessionHistoryQueries.push(query);
+        currentActiveQuery = query;
         addMessage('user', `[Hỏi về "${displayConcept}"]: ${query}`);
         customInput.value = '';
         
@@ -759,6 +903,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
     const val = input.value.trim();
     if (!val) return;
     input.value = '';
+    currentActiveQuery = val;
 
     addMessage('user', val);
 
