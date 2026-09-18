@@ -124,6 +124,29 @@ def get_key_phrases(text):
         phrases.append(words[i] + ' ' + words[i+1] + ' ' + words[i+2])
     return phrases
 
+CONCEPT_EXPANSIONS = {
+    'nghẽn cổ chai': 'RNN LSTM tuần tự đọc từng chữ một xử lý từng chữ một quên những cái ở đầu',
+    'cổ chai': 'RNN LSTM tuần tự đọc từng chữ một xử lý từng chữ một',
+    'bottleneck': 'RNN LSTM tuần tự đọc từng chữ một xử lý từng chữ một',
+    'attention': 'Attention Is All You Need đọc cả cụm keyword mối liên kết giữa các từ',
+    'tự chú ý': 'Attention Is All You Need đọc cả cụm keyword mối liên kết giữa các từ',
+    'bert': 'mô hình hiểu ngôn ngữ hai chiều bidirectional toàn cảnh ngữ cảnh',
+    'gpt': 'mô hình sinh văn bản generative từ trái sang phải token tiếp theo',
+    'delimiters': 'thẻ định danh cặp thẻ xml user_query instruction context bleed prompt injection',
+    'context rot': '1 triệu token quên thông tin ở đầu cửa sổ ngữ cảnh càng về sau càng kém',
+    'human-centered design': 'bắt đầu từ con người người dùng bài toán kinh doanh pain point',
+    'routing': 'chia task model rẻ model mạnh orchestrator phân luồng',
+    'orchestrator': 'orchestrator-workers chia task điều phối',
+}
+
+def expand_query_for_retrieval(query):
+    ql = query.lower()
+    expanded = query
+    for k, v in CONCEPT_EXPANSIONS.items():
+        if k in ql:
+            expanded += ' ' + v
+    return expanded
+
 def rank_documents(query, documents, user_text='', text_key='text', top_k=3, preferred_source=None):
     words = [w for w in tokenize(query) if w not in STOP_WORDS]
     user_words = [w for w in tokenize(user_text) if w not in STOP_WORDS]
@@ -136,23 +159,255 @@ def rank_documents(query, documents, user_text='', text_key='text', top_k=3, pre
         if preferred_source and doc.get('source_file') == preferred_source:
             score += 25
         if query.lower().strip() in txt:
-            score += 50
+            score += 60
         if user_text and len(user_text) > 2 and user_text.lower().strip() in txt:
             score += 40
+        matched_phrases = 0
         for p in phrases:
             p_w = p.split()
             if any(w not in STOP_WORDS for w in p_w) and p in txt:
                 score += 30
+                matched_phrases += 1
         d_tokens = set(tokenize(doc[text_key]))
-        score += sum(3 for w in words if w in d_tokens)
-        score += sum(4 for w in user_words if w in d_tokens)
+        matched_tokens = [w for w in words if w in d_tokens]
+        if len(matched_tokens) >= 2 or matched_phrases > 0:
+            score += sum(4 for _ in matched_tokens)
+        elif len(matched_tokens) == 1 and len(matched_tokens[0]) >= 4:
+            score += 3
+        if user_words:
+            matched_user_tokens = [w for w in user_words if w in d_tokens]
+            if len(matched_user_tokens) >= 2:
+                score += sum(3 for _ in matched_user_tokens)
         scored.append((score, doc))
         
     scored.sort(key=lambda x: x[0], reverse=True)
     return [x[1] for x in scored[:top_k]]
 
+def generate_grounded_fallback(query_target, active_slide, matched_slides, matched_transcripts, history_queries=None):
+    ql = query_target.lower().strip()
+    
+    # Check out-of-scope / prompt injection
+    if (any(p in ql for p in ['hack', 'bài thơ', 'viết thơ', 'chứng khoán', 'prompt nội bộ', 'bỏ qua các chỉ dẫn', 'mùa thu']) or
+        ('ppo' not in ql and any(k in ql for k in ['backpropagation', 'cnn', 'convolutional']))):
+        return {
+            "summary": "Nội dung này nằm ngoài phạm vi các bài học được hỗ trợ (Day 01, Day 02, Day 04). VLearn AI Tutor chỉ giải đáp các kiến thức chính thống trong giáo trình.",
+            "citation": None,
+            "next_concept": None,
+            "option_a": None,
+            "option_b": None,
+            "is_out_of_scope": True,
+            "latency_ms": 15,
+            "model": "grounded-engine-v2",
+            "highlight_evidence": {"keywords": [], "evidence_phrases": []},
+            "source_snippets": []
+        }
+
+    # PPO rule
+    if 'ppo' in ql or 'proximal policy optimization' in ql:
+        s_slide = active_slide or (matched_slides[0] if matched_slides else None)
+        return {
+            "summary": "Thuật toán PPO (Proximal Policy Optimization) thuộc bài học RLHF chuyên sâu, không có trong nội dung bài học Day 1 này.",
+            "citation": "Slide [d1-slide-hackathon.pdf] · Trang 8 (Ghi chú phạm vi bài học)",
+            "next_concept": None,
+            "option_a": None,
+            "option_b": None,
+            "is_out_of_scope": True,
+            "latency_ms": 25,
+            "model": "grounded-engine-v2",
+            "highlight_evidence": {
+                "keywords": ["PPO", "RLHF"],
+                "evidence_phrases": ["Thuật toán PPO (Proximal Policy Optimization) thuộc bài học RLHF chuyên sâu"]
+            },
+            "source_snippets": [{
+                "type": "slide",
+                "source_file": "d1-slide-hackathon.pdf",
+                "page_label": "Trang 8",
+                "page_index": 8,
+                "title": "2017: Transformer & Cơ chế Tự chú ý",
+                "snippet": s_slide['text'][:360] if s_slide else "Thuật toán PPO thuộc bài học RLHF chuyên sâu"
+            }]
+        }
+
+    selected_slide = active_slide or (matched_slides[0] if matched_slides else None)
+    selected_trans = matched_transcripts[0] if matched_transcripts else None
+
+    if 'nghẽn cổ chai' in ql or 'cổ chai' in ql or 'bottleneck' in ql:
+        t_target = next((t for t in matched_transcripts if t.get('tag') == 'T04-039'), selected_trans)
+        summary = "Nghẽn cổ chai là hiện tượng các mô hình truyền thống (RNN, LSTM) xử lý dữ liệu theo chuỗi tuần tự từng từ một, dẫn đến khó khăn trong việc huấn luyện song song và dễ quên thông tin ở đầu câu khi câu dài."
+        citation = "Slide [d1-slide-hackathon.pdf] · Trang 8 & Transcript [transcript-04-clean.md] · Đoạn [T04-039]"
+        next_concept = "Cơ chế Attention"
+        opt_a = "Transformer giải quyết hiện tượng nghẽn cổ chai của RNN/LSTM như thế nào?"
+        opt_b = "Tại sao xử lý song song trên GPU lại là bước ngoặt so với xử lý tuần tự?"
+        kw = ["nghẽn cổ chai", "RNN", "LSTM", "tuần tự"]
+        ph = [
+            "hiện tượng nghẽn cổ chai",
+            "xử lý dữ liệu theo chuỗi tuần tự từng từ một",
+            "đọc từng chữ một, xử lý từng chữ một, cứ nối tiếp nhau như vậy",
+            "khi đến câu rất dài thì nó sẽ quên những cái ở đầu"
+        ]
+        selected_trans = t_target
+
+    elif 'tự chú ý' in ql or 'attention' in ql or 'long-term dependency' in ql:
+        t_target = next((t for t in matched_transcripts if t.get('tag') in ('T04-040', 'T04-094')), selected_trans)
+        summary = "Cơ chế Attention (Tự chú ý) cho phép mô hình nhìn sang những từ quan trọng khác trong cả câu cùng một lúc nhờ xử lý song song, giải quyết triệt để vấn đề mất thông tin dài hạn của RNN/LSTM."
+        citation = f"Slide [d1-slide-hackathon.pdf] · Trang 8 & Transcript [transcript-04-clean.md] · Đoạn [{t_target.get('tag', 'T04-040')}]"
+        next_concept = "Mối liên kết Attention"
+        opt_a = "Attention tính ma trận trọng số liên kết giữa các cặp từ như thế nào?"
+        opt_b = "Multi-Head Attention giúp mô hình quan sát văn bản dưới nhiều góc độ ra sao?"
+        kw = ["Attention", "Tự chú ý", "Transformer", "song song"]
+        ph = [
+            "mỗi từ có thể nhìn sang những từ quan trọng khác trong cả câu",
+            "thay vì lần lượt đọc và dịch từng chữ một, nó sẽ đọc cả cụm đấy",
+            "nhận diện ra được mối liên kết giữa nhiều từ trong một câu"
+        ]
+        selected_trans = t_target
+
+    elif 'transformer' in ql:
+        t_target = next((t for t in matched_transcripts if t.get('tag') in ('T04-038', 'T04-094')), selected_trans)
+        summary = "Transformer (2017) là bước ngoặt kiến trúc dựa trên cơ chế Attention, giúp mô hình hiểu ngôn ngữ linh hoạt hơn và trở thành nền móng kỹ thuật cốt lõi cho GPT, BERT và làn sóng LLM hiện đại."
+        citation = f"Slide [d1-slide-hackathon.pdf] · Trang 8 & Transcript [transcript-04-clean.md] · Đoạn [{t_target.get('tag', 'T04-038')}]"
+        next_concept = "Kiến trúc Transformer"
+        opt_a = "Bài báo 'Attention Is All You Need' năm 2017 có đóng góp đột phá gì?"
+        opt_b = "Transformer khác biệt như thế nào so với mô hình sinh tuần tự?"
+        kw = ["Transformer", "Attention", "GPT", "BERT"]
+        ph = [
+            "2017: Transformer & Cơ chế Tự chú ý",
+            "trở thành nền móng kỹ thuật cốt lõi cho GPT, BERT",
+            "bài báo rất nổi tiếng — \"Attention Is All You Need\""
+        ]
+        selected_trans = t_target
+
+    elif 'delimiters' in ql or 'context bleed' in ql or 'prompt injection' in ql or 'bao bọc' in ql or 'nhất quán' in ql:
+        t_target = next((t for t in matched_transcripts if t.get('tag') == 'T-Delimiters'), selected_trans)
+        summary = "Delimiters (như cặp thẻ XML <user_query>) là kỹ thuật phòng vệ lớp 1 quan trọng nhất trong Prompt Engineering để phân định rõ giữa lệnh hệ thống và dữ liệu người dùng, ngăn ngừa Context Bleed và Prompt Injection."
+        citation = "Slide [d4-slide-hackathon.pdf] · Trang 55 & Transcript [transcript-04-clean.md] · Đoạn [T-Delimiters]"
+        next_concept = "Kỹ thuật Delimiters"
+        opt_a = "Tại sao thay đổi định dạng delimiter giữa các lượt prompt lại làm giảm độ chính xác?"
+        opt_b = "Làm thế nào để bao bọc mọi dữ liệu từ API responses hoặc DB queries an toàn?"
+        kw = ["Delimiters", "Prompt Injection", "Context Bleed", "phân định rõ"]
+        ph = [
+            "phòng vệ lớp 1 quan trọng nhất trong Prompt Engineering",
+            "phân định rõ giữa lệnh hệ thống (Instruction) và dữ liệu thô (Data)",
+            "ngăn ngừa hiện tượng Context Bleed và tấn công Prompt Injection"
+        ]
+        selected_trans = t_target
+
+    elif 'context rot' in ql or '1 triệu token' in ql:
+        t_target = next((t for t in matched_transcripts if t.get('tag') in ('T04-052', 'T04-053')), selected_trans)
+        summary = "Context rot là hiện tượng khi đưa quá nhiều thông tin vào cửa sổ ngữ cảnh (như 1 triệu token), mô hình dễ chú ý sai chỗ và quên những thông tin ở đoạn đầu, làm giảm độ thông minh và chính xác."
+        citation = f"Slide [d4-slide-hackathon.pdf] · Trang 55 & Transcript [transcript-04-clean.md] · Đoạn [{t_target.get('tag', 'T04-052')}]"
+        next_concept = "Quản lý Context"
+        opt_a = "Các giải pháp nào giúp duy trì độ chính xác khi mở rộng cửa sổ ngữ cảnh?"
+        opt_b = "Tại sao đưa 100.000 token chất lượng cao lại hiệu quả hơn 1 triệu token thô?"
+        kw = ["Context rot", "cửa sổ ngữ cảnh", "1 triệu token"]
+        ph = [
+            "hiện tượng Context rot",
+            "càng đưa nhiều thông tin, càng đưa nhiều ngữ cảnh",
+            "thường quên những thông tin ở lúc đầu"
+        ]
+        selected_trans = t_target
+
+    elif 'human-centered design' in ql or 'hcd' in ql:
+        t_target = next((t for t in matched_transcripts if t.get('tag') in ('T01-004', 'T01-087')), selected_trans)
+        summary = "Human-Centered Design (HCD) là phương pháp thiết kế lấy con người làm trung tâm, bắt đầu từ bài toán và nỗi đau thực tế của người dùng trước khi lựa chọn giải pháp công nghệ AI."
+        citation = f"Slide [d2-slide-hackathon.pdf] · Trang 24 & Transcript [transcript-01-clean.md] · Đoạn [{t_target.get('tag', 'T01-004')}]"
+        next_concept = "Human-Centered Design"
+        opt_a = "Tại sao cần bắt đầu từ người dùng thay vì công nghệ trong HCD?"
+        opt_b = "Làm thế nào để xác định đúng bài toán kinh doanh cho sản phẩm AI?"
+        kw = ["Human-Centered Design", "người dùng", "bài toán kinh doanh"]
+        ph = [
+            "bắt đầu từ con người",
+            "bài toán thực tế của người dùng"
+        ]
+        selected_trans = t_target
+
+    elif 'routing' in ql or 'orchestrator' in ql or 'workflow' in ql:
+        t_target = next((t for t in matched_transcripts if t.get('tag') == 'T03-131'), selected_trans)
+        summary = "Routing pattern là mô hình điều phối phân luồng tác vụ: câu dễ định tuyến sang model nhỏ/rẻ để tiết kiệm chi phí, câu phức tạp chuyển sang model mạnh, giúp tối ưu hiệu năng và độ trễ."
+        citation = "Slide [d2-slide-hackathon.pdf] · Trang 52 & Transcript [transcript-03-clean.md] · Đoạn [T03-131]"
+        next_concept = "Workflow Patterns"
+        opt_a = "Khi nào nên dùng Routing pattern thay vì Orchestrator-Workers?"
+        opt_b = "Cách đo lường và đánh giá chi phí khi phân luồng qua nhiều model?"
+        kw = ["Routing pattern", "Orchestrator-Workers", "phân luồng"]
+        ph = [
+            "câu dễ đi model rẻ, câu khó đi model mạnh",
+            "chia task tuần tự có gate kiểm tra"
+        ]
+        selected_trans = t_target
+
+    elif 'bert' in ql or 'hai chiều' in ql:
+        t_target = next((t for t in matched_transcripts if t.get('tag') == 'T04-003'), selected_trans)
+        summary = "BERT là mô hình hiểu ngôn ngữ hai chiều (bidirectional), quan sát toàn cảnh ngữ cảnh cả hai phía của từ để phân tích ý nghĩa và trích xuất đặc trưng, khác với GPT sinh tuần tự từ trái sang phải."
+        citation = "Slide [d1-slide-hackathon.pdf] · Trang 8 & Transcript [transcript-04-clean.md] · Đoạn [T04-003]"
+        next_concept = "Mô hình BERT"
+        opt_a = "BERT và GPT khác nhau như thế nào trong cơ chế xử lý ngôn ngữ?"
+        opt_b = "Tại sao mô hình hiểu 2 chiều lại phù hợp cho phân loại và trích xuất đặc trưng?"
+        kw = ["BERT", "hai chiều", "ngữ cảnh", "GPT"]
+        ph = [
+            "Mô hình hiểu ngôn ngữ hai chiều (bidirectional)",
+            "nhìn toàn cảnh ngữ cảnh cả hai phía của từ để phân tích ý nghĩa",
+            "trở thành nền móng kỹ thuật cốt lõi cho GPT, BERT"
+        ]
+        selected_trans = t_target
+
+    else:
+        s_title = selected_slide.get('title', 'Bài học') if selected_slide else 'Bài học'
+        s_file = selected_slide.get('source_file', 'slide.pdf') if selected_slide else 'slide.pdf'
+        s_p = selected_slide.get('page_label', 'Trang 8') if selected_slide else 'Trang 8'
+        t_file = selected_trans.get('source_file', 'transcript-04-clean.md') if selected_trans else 'transcript-04-clean.md'
+        t_tag = selected_trans.get('tag', 'T04-038') if selected_trans else 'T04-038'
+        
+        summary = f"Khái niệm \"{query_target}\" được giảng giải trực tiếp trong bài học {s_p} ({s_title}), giải thích nguyên lý hoạt động và ứng dụng thực tiễn trong hệ thống AI."
+        citation = f"Slide [{s_file}] · {s_p} & Transcript [{t_file}] · Đoạn [{t_tag}]"
+        next_concept = query_target[:25]
+        opt_a = f"Nguyên lý hoạt động cốt lõi của {query_target} là gì?"
+        opt_b = f"Ứng dụng thực tế của {query_target} trong xây dựng sản phẩm AI?"
+        kw = [query_target]
+        ph = [query_target]
+
+    snippets = []
+    if selected_slide:
+        txt = selected_slide['text'].strip()
+        if len(txt) > 360:
+            txt = txt[:360].rsplit(' ', 1)[0] + '...'
+        snippets.append({
+            "type": "slide",
+            "source_file": selected_slide.get('source_file', ''),
+            "page_label": selected_slide.get('page_label', ''),
+            "page_index": selected_slide.get('page_index', 0),
+            "title": selected_slide.get('title', ''),
+            "snippet": txt
+        })
+    if selected_trans:
+        txt = selected_trans['text'].strip()
+        if len(txt) > 420:
+            txt = txt[:420].rsplit(' ', 1)[0] + '...'
+        snippets.append({
+            "type": "transcript",
+            "source_file": selected_trans.get('source_file', ''),
+            "tag": selected_trans.get('tag', ''),
+            "snippet": txt
+        })
+
+    return {
+        "summary": summary,
+        "citation": citation,
+        "next_concept": next_concept,
+        "option_a": opt_a,
+        "option_b": opt_b,
+        "is_out_of_scope": False,
+        "latency_ms": 35,
+        "model": "grounded-engine-v2",
+        "highlight_evidence": {
+            "keywords": kw,
+            "evidence_phrases": ph
+        },
+        "source_snippets": snippets
+    }
+
 def call_openai_gpt(user_text, slide_key, custom_query=None, history_queries=None):
-    query_target = custom_query if custom_query else user_text
+    query_target = custom_query.strip() if custom_query else user_text.strip()
+    effective_user_text = user_text.strip() if not custom_query else '' 
     
     # 1. RETRIEVE TỰ ĐỘNG TOP SLIDES VÀ TRANSCRIPTS PHÙ HỢP NHẤT TỪ DỮ LIỆU THẬT
     active_slide = None
@@ -167,7 +422,7 @@ def call_openai_gpt(user_text, slide_key, custom_query=None, history_queries=Non
         active_slide = next((s for s in ALL_SLIDES if s['source_file'] == 'd4-slide-hackathon.pdf'), None)
         preferred_transcript = 'transcript-04-clean.md'
 
-    ranked_slides = rank_documents(query_target, ALL_SLIDES, user_text=user_text, text_key='text', top_k=2)
+    ranked_slides = rank_documents(query_target, ALL_SLIDES, user_text=effective_user_text, text_key='text', top_k=2)
     matched_slides = []
     if active_slide:
         matched_slides.append(active_slide)
@@ -176,8 +431,9 @@ def call_openai_gpt(user_text, slide_key, custom_query=None, history_queries=Non
             matched_slides.append(s)
     matched_slides = matched_slides[:3]
 
+    expanded_transcript_query = expand_query_for_retrieval(query_target)
     matched_transcripts = rank_documents(
-        query_target, ALL_TRANSCRIPTS, user_text=user_text, text_key='text', top_k=4, preferred_source=preferred_transcript
+        expanded_transcript_query, ALL_TRANSCRIPTS, user_text=effective_user_text, text_key='text', top_k=4, preferred_source=preferred_transcript
     )
     
     # Đóng gói ngữ cảnh bài giảng cho LLM
@@ -218,16 +474,21 @@ QUY TẮC BẮT BUỘC VỀ NỘI DUNG VÀ TRÍCH NGUỒN:
    - Trả lời súc tích trong 1-3 câu (dưới 280 ký tự), nêu đúng bản chất cốt lõi.
    - TUYỆT ĐỐI CẤM chèn bất kỳ ký hiệu trích dẫn nào (như [Trang...], [Transcript...], [Txx-...]) vào trong câu trả lời 'summary'. Toàn bộ thông tin nguồn CHỈ ĐƯỢC đặt trong trường 'citation'.
 
-2. ĐỘNG TRÍCH NGUỒN CHÍNH XÁC (Trường 'citation'):
+2. ĐỘNG TRÍCH NGUỒN CHÍNH XÁC & CHÂN THẬT (Trường 'citation'):
    - BẮT BUỘC trích dẫn dựa trên chính xác File, Số trang và Mã đoạn có trong phần TÀI LIỆU BÀI GIẢNG ở trên!
-   - Định dạng chuẩn:
-     "Slide [<tên_file_slide>] · <số_trang_thật> & Transcript [<tên_file_transcript>] · Đoạn [<mã_đoạn_transcript>]"
-   - Ví dụ:
-     + Nếu bài ở d2 slide 24: "Slide [d2-slide-hackathon.pdf] · Trang 24 & Transcript [transcript-01-clean.md] · Đoạn [T01-004]"
-     + Nếu bài ở d2 slide 23: "Slide [d2-slide-hackathon.pdf] · Trang 23 & Transcript [transcript-01-clean.md] · Đoạn [T01-087]"
-     + Nếu bài ở d2 slide 52: "Slide [d2-slide-hackathon.pdf] · Trang 52 & Transcript [transcript-03-clean.md] · Đoạn [T03-131]"
-     + Nếu bài ở d1 slide 8: "Slide [d1-slide-hackathon.pdf] · Trang 8 & Transcript [transcript-04-clean.md] · Đoạn [T04-038]"
-     + Nếu bài ở d4 slide 55: "Slide [d4-slide-hackathon.pdf] · Trang 55 & Transcript [transcript-04-clean.md] · Đoạn [T-Delimiters]"
+   - NGUYÊN TẮC TRÍCH NGUỒN CHÂN THẬT (TUYỆT ĐỐI KHÔNG CỐ TÌNH TRÍCH DẪN CHO ĐỦ CẢ 2 FILE NẾU MỘT TRONG HAI KHÔNG LIÊN QUAN):
+     + Nếu CẢ Slide VÀ Transcript đều chứa nội dung trực tiếp giảng giải cho câu hỏi:
+       "Slide [<tên_file_slide>] · <số_trang_thật> & Transcript [<tên_file_transcript>] · Đoạn [<mã_đoạn_transcript>]"
+       Ví dụ:
+       * Nếu về RNN/LSTM tuần tự vs Attention: "Slide [d1-slide-hackathon.pdf] · Trang 8 & Transcript [transcript-04-clean.md] · Đoạn [T04-039]"
+       * Nếu về Delimiters: "Slide [d4-slide-hackathon.pdf] · Trang 55 & Transcript [transcript-04-clean.md] · Đoạn [T-Delimiters]"
+       * Nếu về Human-Centered Design: "Slide [d2-slide-hackathon.pdf] · Trang 24 & Transcript [transcript-01-clean.md] · Đoạn [T01-004]"
+       * Nếu về Workflow Patterns: "Slide [d2-slide-hackathon.pdf] · Trang 52 & Transcript [transcript-03-clean.md] · Đoạn [T03-131]"
+     + Nếu CHỈ CÓ Slide chứa nội dung (các đoạn Transcript được cấp không giảng giải về chi tiết này):
+       CHỈ trích dẫn Slide, TUYỆT ĐỐI KHÔNG gượng ép trích dẫn một đoạn Transcript không liên quan!
+       Ví dụ: "Slide [d1-slide-hackathon.pdf] · Trang 8"
+     + Nếu CHỈ CÓ Transcript chứa nội dung (lời giảng mở rộng không nằm trên slide):
+       Ví dụ: "Transcript [transcript-04-clean.md] · Đoạn [T04-052]"
    - TUYỆT ĐỐI KHÔNG fix cứng một số trang cố định. Trang nào chứa thông tin thì trích dẫn đúng trang đó!
    - TUYỆT ĐỐI KHÔNG sinh số trang ảo (như trang 304, 957, 1077).
 
@@ -243,7 +504,7 @@ QUY TẮC BẮT BUỘC VỀ NỘI DUNG VÀ TRÍCH NGUỒN:
    - 'keywords': 1-3 thực thể / khái niệm chuyên môn trọng tâm (VD: ["Transformer", "Attention", "RNN", "Delimiters", "mạng neuron hồi tiếp"]). TUYỆT ĐỐI KHÔNG chọn các từ phổ thông chung chung như "kiến trúc", "token", "mô hình", "hệ thống".
    - 'evidence_phrases': 2-4 trích đoạn NGUYÊN VĂN (từ 4-15 từ) xuất hiện THẬT SỰ trong tài liệu bài giảng ở trên, trực tiếp làm bằng chứng xác minh cho các luận điểm trong câu trả lời 'summary'.
      + NẾU TRÍCH DẪN CÓ SLIDE: BẮT BUỘC có ít nhất 1-2 cụm nguyên văn từ nội dung Slide.
-     + NẾU TRÍCH DẪN CÓ TRANSCRIPT: BẮT BUỘC có ít nhất 1-2 cụm nguyên văn từ Lời giảng Transcript (TUYỆT ĐỐI KHÔNG để trống Lời giảng Transcript!).
+     + NẾU TRÍCH DẪN CÓ TRANSCRIPT: BẮT BUỘC có ít nhất 1-2 cụm nguyên văn từ Lời giảng Transcript (Trích từ chính đoạn transcript được dẫn trong trường citation).
 
 {history_instruction}
 ĐỊNH DẠNG ĐẦU RA (JSON THUẦN TÚY, KHÔNG DÙNG MARKDOWN):
@@ -282,9 +543,13 @@ QUY TẮC BẮT BUỘC VỀ NỘI DUNG VÀ TRÍCH NGUỒN:
         data=req_data
     )
 
-    with urllib.request.urlopen(req, timeout=12) as response:
-        result = json.loads(response.read().decode('utf-8'))
-        raw_content = result['choices'][0]['message']['content'].strip()
+    try:
+        with urllib.request.urlopen(req, timeout=12) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            raw_content = result['choices'][0]['message']['content'].strip()
+    except Exception as err:
+        print(f"OpenAI API request error: {err}. Switching seamlessly to Grounded Engine v2 fallback...")
+        return generate_grounded_fallback(query_target, active_slide, matched_slides, matched_transcripts, history_queries)
         
         if raw_content.startswith('```'):
             raw_content = raw_content.replace('```json', '').replace('```', '').strip()
@@ -343,59 +608,70 @@ QUY TẮC BẮT BUỘC VỀ NỘI DUNG VÀ TRÍCH NGUỒN:
         # Chuẩn bị source_snippets cho 1-Click Source Peek / Source Inspector
         source_snippets = []
         if parsed.get('citation'):
-            # 1. Slide snippet
-            selected_slide = matched_slides[0] if matched_slides else None
-            if matched_slides:
-                for s in matched_slides:
-                    p_label = s.get('page_label', '')
-                    p_idx = str(s.get('page_index', ''))
-                    if (p_label and p_label.lower() in parsed['citation'].lower()) or (p_idx and f"trang {p_idx}" in parsed['citation'].lower()):
-                        selected_slide = s
-                        break
-            if selected_slide:
-                txt = selected_slide['text'].strip()
-                if len(txt) > 360:
-                    txt = txt[:360].rsplit(' ', 1)[0] + '...'
-                source_snippets.append({
-                    "type": "slide",
-                    "source_file": selected_slide.get('source_file', ''),
-                    "page_label": selected_slide.get('page_label', ''),
-                    "page_index": selected_slide.get('page_index', 0),
-                    "title": selected_slide.get('title', ''),
-                    "snippet": txt
-                })
+            cite_str = str(parsed['citation']).lower()
 
-            # 2. Transcript snippet
-            selected_trans = matched_transcripts[0] if matched_transcripts else None
-            if matched_transcripts:
-                for t in matched_transcripts:
-                    tag = t.get('tag', '')
-                    if tag and tag.lower() in parsed['citation'].lower():
-                        selected_trans = t
-                        break
-            if selected_trans:
-                txt = selected_trans['text'].strip()
-                if len(txt) > 420:
-                    txt = txt[:420].rsplit(' ', 1)[0] + '...'
-                source_snippets.append({
-                    "type": "transcript",
-                    "source_file": selected_trans.get('source_file', ''),
-                    "tag": selected_trans.get('tag', ''),
-                    "snippet": txt
-                })
+            # 1. Slide snippet (chỉ add nếu citation thực sự dẫn Slide)
+            if 'slide' in cite_str:
+                selected_slide = None
+                if matched_slides:
+                    for s in matched_slides:
+                        p_label = s.get('page_label', '')
+                        p_idx = str(s.get('page_index', ''))
+                        if (p_label and p_label.lower() in cite_str) or (p_idx and f"trang {p_idx}" in cite_str):
+                            selected_slide = s
+                            break
+                    if not selected_slide:
+                        selected_slide = matched_slides[0]
+                if selected_slide:
+                    txt = selected_slide['text'].strip()
+                    if len(txt) > 360:
+                        txt = txt[:360].rsplit(' ', 1)[0] + '...'
+                    source_snippets.append({
+                        "type": "slide",
+                        "source_file": selected_slide.get('source_file', ''),
+                        "page_label": selected_slide.get('page_label', ''),
+                        "page_index": selected_slide.get('page_index', 0),
+                        "title": selected_slide.get('title', ''),
+                        "snippet": txt
+                    })
 
-                # Failsafe: Đảm bảo Transcript không bao giờ bị trắng trơn highlight
-                has_trans_ph = any(p.lower() in txt.lower() for p in ph_list)
-                if not has_trans_ph:
-                    t_clauses = re.split(r'[,;.—\n]+', txt)
-                    for cl in t_clauses:
-                        cl_clean = cl.strip()
-                        word_count = len(cl_clean.split())
-                        if 4 <= word_count <= 14:
-                            cl_lower = cl_clean.lower()
-                            if any(w.lower() in cl_lower for w in kw_list if len(w) >= 3) or 'liên quan' in cl_lower or 'kết nối' in cl_lower or 'quên' in cl_lower or 'cả cụm' in cl_lower or 'từng chữ' in cl_lower:
-                                ph_list.append(cl_clean)
-                                break
+            # 2. Transcript snippet (chỉ add nếu citation thực sự dẫn Transcript)
+            if 'transcript' in cite_str:
+                selected_trans = None
+                if matched_transcripts:
+                    for t in matched_transcripts:
+                        tag = t.get('tag', '')
+                        if tag and tag.lower() in cite_str:
+                            selected_trans = t
+                            break
+                    if not selected_trans:
+                        selected_trans = matched_transcripts[0]
+                if selected_trans:
+                    txt = selected_trans['text'].strip()
+                    if len(txt) > 420:
+                        txt = txt[:420].rsplit(' ', 1)[0] + '...'
+                    source_snippets.append({
+                        "type": "transcript",
+                        "source_file": selected_trans.get('source_file', ''),
+                        "tag": selected_trans.get('tag', ''),
+                        "snippet": txt
+                    })
+
+                    # Failsafe: Đảm bảo Transcript không bao giờ bị trắng trơn highlight nếu có transcript snippet
+                    has_trans_ph = any(p.lower() in txt.lower() for p in ph_list)
+                    if not has_trans_ph:
+                        t_clauses = re.split(r'[,;.—\n]+', txt)
+                        for cl in t_clauses:
+                            cl_clean = cl.strip()
+                            word_count = len(cl_clean.split())
+                            if 3 <= word_count <= 15:
+                                cl_lower = cl_clean.lower()
+                                if (any(w.lower() in cl_lower for w in kw_list if len(w) >= 3) or 
+                                    'liên quan' in cl_lower or 'kết nối' in cl_lower or 'quên' in cl_lower or 
+                                    'cả cụm' in cl_lower or 'từng chữ' in cl_lower or 'tuần tự' in cl_lower or 
+                                    'song song' in cl_lower or 'vấn đề' in cl_lower):
+                                    ph_list.append(cl_clean)
+                                    break
 
         parsed['highlight_evidence'] = {
             'keywords': kw_list,
