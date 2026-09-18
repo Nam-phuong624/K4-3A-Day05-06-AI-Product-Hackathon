@@ -595,22 +595,18 @@ header {
   gap: 5px;
 }
 
-/* HIGHLIGHT STYLES IN SOURCE INSPECTOR (HIGH CONTRAST) */
-mark.highlight-kw {
-  background: #fef08a; /* Bright warm sunny yellow */
-  color: #854d0e;       /* Deep warm brown text */
-  font-weight: 700;
-  padding: 1px 4px;
-  border-radius: 3px;
-  border-bottom: 2px solid #eab308;
-}
+/* SINGLE UNIFIED HIGHLIGHT STYLE (HIGH CONTRAST & SEAMLESS) */
+mark.highlight-grounded,
+mark.highlight-kw,
 mark.highlight-phrase {
-  background: #dbeafe; /* Crisp soft royal blue */
-  color: #1e40af;       /* Deep high-contrast blue */
+  background: #fef08a; /* Warm sunny amber */
+  color: #78350f;       /* Deep high-contrast dark brown (WCAG AAA) */
   font-weight: 700;
-  padding: 1px 4px;
-  border-radius: 3px;
-  border-bottom: 2px solid #3b82f6;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border-bottom: 2px solid #f59e0b;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 /* Progressive Box (Tier 2) */

@@ -433,7 +433,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
     return c;
   }
 
-  // ĐỐI SOÁT NGUỒN THÔNG MINH: SỬ DỤNG BẰNG CHỨNG NGỮ NGHĨA TỪ OPENAI GPT-4O-MINI
+  // ĐỐI SOÁT NGUỒN THÔNG MINH: 1 MÀU DUY NHẤT (HIGH CONTRAST & KHỬ LẶP)
   function highlightGroundedSnippet(rawSnippet, highlightEvidence = null, query = "", summary = "") {
     if (!rawSnippet) return "";
 
@@ -448,12 +448,14 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
     let targetKeywords = [];
     let evidencePhrases = [];
 
+    const GENERIC_STOP = new Set(["kiến trúc", "token", "mô hình", "hệ thống", "bài toán", "dữ liệu", "ngôn ngữ"]);
+
     // 1. ƯU TIÊN SỐ 1: BẰNG CHỨNG XÁC THỰC DO CHÍNH OPENAI TRÍCH XUẤT
     if (highlightEvidence && typeof highlightEvidence === 'object') {
       if (Array.isArray(highlightEvidence.keywords)) {
         targetKeywords = highlightEvidence.keywords
           .map(k => String(k).trim())
-          .filter(k => k.length >= 2);
+          .filter(k => k.length >= 2 && !GENERIC_STOP.has(k.toLowerCase()));
       }
       if (Array.isArray(highlightEvidence.evidence_phrases)) {
         evidencePhrases = highlightEvidence.evidence_phrases
@@ -466,14 +468,20 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
     if (evidencePhrases.length === 0) {
       const FALLBACK_PHRASES = [
         "hiểu ngôn ngữ theo cách linh hoạt hơn",
+        "mỗi từ có thể nhìn sang những từ quan trọng khác trong cả câu",
         "nhìn sang những từ quan trọng khác trong cả câu",
+        "mỗi từ được \"nhìn sang\" những từ quan trọng khác",
         "thay vì chỉ đi tuần tự từng bước",
         "nền móng kỹ thuật cho GPT, BERT",
         "Attention Is All You Need",
+        "bài báo rất nổi tiếng — \"Attention Is All You Need\"",
         "thay vì lần lượt đọc và dịch tuần tự từng chữ một",
         "gây nghẽn cổ chai",
         "đọc cả cụm",
         "nhận diện các từ có liên quan trực tiếp đến nhau cùng một lúc trên GPU",
+        "Chủ động \"quay đầu\" nhìn lại các token",
+        "những cụm từ có sự liên quan đến nhau",
+        "mối liên kết giữa nhiều từ trong một câu",
         "recurrent neural network ( RNN )",
         "recurrent neural network",
         "đọc từng chữ một, xử lý từng chữ một, cứ nối tiếp nhau như vậy",
@@ -492,10 +500,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
         "Duy trì đồng nhất một loại thẻ phân tách xuyên suốt toàn bộ prompt",
         "phòng vệ lớp 1 để chống Prompt Injection và Context Bleed",
         "tách bạch rõ ràng giữa chỉ thị hệ thống và dữ liệu thô",
-        "tăng độ ổn định hành vi của Agent",
-        "quản lý vòng lặp giữa Agent và Tool",
-        "kiểm soát trạng thái an toàn",
-        "tràn bộ nhớ khi chạy tool loop"
+        "tăng độ ổn định hành vi của Agent"
       ];
       for (const fp of FALLBACK_PHRASES) {
         if (text.toLowerCase().includes(fp.toLowerCase())) {
@@ -504,36 +509,35 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
       }
     }
 
-    // 3. TỪ KHÓA ĐỐI CHIẾU: TUYỆT ĐỐI DÙNG TỪ GHÉP / THỰC THỂ HOÀN CHỈNH (KHÔNG BĂM LẺ ÂM TIẾT)
+    // 3. TỪ KHÓA ĐỐI CHIẾU: THỰC THỂ HOÀN CHỈNH (KHÔNG LẤY TỪ PHỔ THÔNG)
     if (targetKeywords.length === 0) {
       const DOMAIN_COMPOUNDS = [
-        "mô hình xử lý ngôn ngữ truyền thống", "mô hình truyền thống",
-        "mạng neuron hồi tiếp", "mạng neuron", "mô hình ngôn ngữ",
+        "mô hình xử lý ngôn ngữ truyền thống", "mạng neuron hồi tiếp", "mạng neuron",
         "Transformer", "Attention", "Self-Attention", "RNN", "LSTM",
         "Delimiters", "Prompt Injection", "Context Bleed", "Context Rot",
         "Prompt Chaining", "Routing", "Parallelization", "Anthropic",
         "PPO", "RLHF", "BERT", "GPT", "GPU", "MLOps",
-        "tuần tự", "song song", "nghẽn cổ chai", "bộ nhớ", "độ trễ", "chi phí",
-        "trọng số", "ma trận", "harness", "agent", "tool", "cô lập", "nhất quán",
-        "&lt;user_query&gt;", "&lt;instruction&gt;", "Lego", "RAM"
+        "tuần tự", "song song", "nghẽn cổ chai", "bộ nhớ", "độ trễ",
+        "trọng số", "ma trận", "harness", "agent", "nhất quán",
+        "&lt;user_query&gt;", "&lt;instruction&gt;"
       ];
       for (const kw of DOMAIN_COMPOUNDS) {
         if (text.toLowerCase().includes(kw.toLowerCase())) {
           targetKeywords.push(kw);
         }
       }
-      if (query && query.trim().length >= 3) {
+      if (query && query.trim().length >= 3 && !GENERIC_STOP.has(query.trim().toLowerCase())) {
         targetKeywords.push(query.trim());
       }
     }
 
-    // SẮP XẾP ĐỘ DÀI GIẢM DẦN ĐỂ ƯU TIÊN CỤM TỪ DÀI VÀ TRỌN VẸN
+    // SẮP XẾP ĐỘ DÀI GIẢM DẦN
     const sortedPhrases = Array.from(new Set(evidencePhrases)).sort((a, b) => b.length - a.length);
     const sortedKeywords = Array.from(new Set(targetKeywords)).sort((a, b) => b.length - a.length);
 
-    const tags = new Uint8Array(text.length); // 0: none, 1: phrase (blue), 2: kw (yellow)
+    const tags = new Uint8Array(text.length); // 0: none, 1: highlighted (single color)
 
-    // Bước 1: Đánh dấu cụm bằng chứng (Evidence Phrases)
+    // Bước 1: Đánh dấu các cụm bằng chứng nguyên văn
     for (const phrase of sortedPhrases) {
       if (!phrase || phrase.length < 4) continue;
       const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
@@ -548,9 +552,9 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
       } catch (e) {}
     }
 
-    // Bước 2: Đánh dấu từ khóa cốt lõi (Keywords) - Chỉ bôi vàng độc lập khi không nằm trong phrase
+    // Bước 2: Đánh dấu từ khóa cốt lõi (GIỚI HẠN TỐI ĐA 1 LẦN MATCH ĐỂ TRÁNH SPAM TỪ KHÓA)
     for (const kw of sortedKeywords) {
-      if (!kw || kw.length < 2) continue;
+      if (!kw || kw.length < 2 || GENERIC_STOP.has(kw.toLowerCase())) continue;
       const isXmlEntity = kw.startsWith("&lt;");
       const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
       try {
@@ -559,40 +563,40 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
           : new RegExp("(^|[^\\p{L}\\p{N}_])(" + escaped + ")(?=[^\\p{L}\\p{N}_]|$)", "gui");
 
         let match;
+        let count = 0;
         while ((match = regex.exec(text)) !== null) {
+          if (count >= 1) break; // Khử lặp: chỉ highlight 1 lần xuất hiện đầu tiên
           const start = isXmlEntity ? match.index : match.index + match[1].length;
           const end = isXmlEntity ? match.index + match[0].length : start + match[2].length;
-
-          // Kiểm tra xem có nằm trọn vẹn trong một phrase đã được bôi xanh không
-          let isInsidePhrase = false;
           for (let i = start; i < end; i++) {
-            if (tags[i] === 1) isInsidePhrase = true;
+            tags[i] = 1;
           }
-
-          // Tránh hiệu ứng bàn cờ: nếu chưa bôi xanh thì bôi vàng độc lập
-          if (!isInsidePhrase) {
-            for (let i = start; i < end; i++) {
-              tags[i] = 2;
-            }
-          }
+          count++;
         }
       } catch (e) {}
     }
 
-    // Bước 3: Lắp ráp HTML với <mark> tags chuẩn mực, không rách vỡ chữ
+    // Bước 3: Nối liền khoảng trống nhỏ (1 dấu cách / dấu phẩy) giữa 2 vùng highlight liền kề
+    for (let i = 1; i < text.length - 1; i++) {
+      if (tags[i - 1] === 1 && tags[i + 1] === 1 && tags[i] === 0 && /[\s,;:-]/.test(text[i])) {
+        tags[i] = 1;
+      }
+    }
+
+    // Bước 4: Lắp ráp HTML với 1 MÀU DUY NHẤT
     const out = [];
-    let currentTag = 0;
+    let inMark = false;
     for (let i = 0; i < text.length; i++) {
-      const t = tags[i];
-      if (t !== currentTag) {
-        if (currentTag !== 0) out.push("</mark>");
-        if (t === 1) out.push('<mark class="highlight-phrase">');
-        else if (t === 2) out.push('<mark class="highlight-kw">');
-        currentTag = t;
+      if (tags[i] === 1 && !inMark) {
+        out.push('<mark class="highlight-grounded">');
+        inMark = true;
+      } else if (tags[i] === 0 && inMark) {
+        out.push('</mark>');
+        inMark = false;
       }
       out.push(text[i]);
     }
-    if (currentTag !== 0) out.push("</mark>");
+    if (inMark) out.push('</mark>');
 
     return out.join("");
   }
@@ -649,8 +653,7 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
             <div class="inspector-title">🎯 1-CLICK SOURCE PEEK · ĐỐI SOÁT NGUỒN GỐC</div>
             <div class="inspector-desc">Trích đoạn nguyên văn từ bài giảng được AI tham chiếu để sinh câu trả lời:</div>
             <div class="inspector-legend">
-              <span class="legend-item"><mark class="highlight-kw">Từ khóa đối chiếu</mark></span>
-              <span class="legend-item"><mark class="highlight-phrase">Cụm từ liên quan trực tiếp</mark></span>
+              <span class="legend-item"><mark class="highlight-grounded">🎯 Bằng chứng đối soát trực tiếp từ bài giảng</mark></span>
             </div>
           </div>
           <button class="inspector-close-btn" title="Đóng đối soát">✕</button>
