@@ -159,21 +159,43 @@ DỮ LIỆU NỀN TẢNG (GROUNDING):
         (slideContainer.contains(selection.anchorNode) || slideContainer.contains(selection.anchorNode.parentNode));
 
       if (selectedText.length >= 1 && isInside) {
-        if (selectedText === lastProcessedSelection) return;
-        lastProcessedSelection = selectedText;
-        currentSelection = selectedText;
-        currentActiveQuery = selectedText;
-        if (preview) {
-          preview.innerText = `"${selectedText}" (${selectedText.length} ký tự)`;
+        // Smart Selection Word-Snapping: Bắt dính ranh giới từ nếu học viên bôi đen trượt/thiếu ký tự
+        let textToProcess = selectedText;
+        const k = SLIDE_KNOWLEDGE[activeSlide];
+        if (k && k.content) {
+          const fullText = k.content;
+          const idx = fullText.toLowerCase().indexOf(selectedText.toLowerCase());
+          if (idx !== -1) {
+            const vnRegex = /[a-zA-Z0-9àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệđìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ]/;
+            let start = idx;
+            while (start > 0 && vnRegex.test(fullText[start - 1])) start--;
+            let end = idx + selectedText.length;
+            while (end < fullText.length && vnRegex.test(fullText[end])) end++;
+            let expanded = fullText.substring(start, end).trim();
+            if (expanded.toLowerCase() === 'nghẽn' && fullText.toLowerCase().includes('nghẽn cổ chai')) {
+              expanded = 'nghẽn cổ chai';
+            }
+            if (expanded.length > selectedText.length) {
+              textToProcess = expanded;
+            }
+          }
         }
 
-        const cleaned = selectedText.replace(/[\s\-_–—>><=.,:;!?()[\]{}]+/g, '');
-        if (selectedText.length < 3 || cleaned.length < 2) {
-          showToast(`⚠️ Cụm từ "${selectedText}" không hợp lệ`);
-        } else {
-          showToast(`⚡ Nhận diện: "${selectedText.substring(0, 22)}..."`);
+        if (textToProcess === lastProcessedSelection) return;
+        lastProcessedSelection = textToProcess;
+        currentSelection = textToProcess;
+        currentActiveQuery = textToProcess;
+        if (preview) {
+          preview.innerText = `"${textToProcess}" (${textToProcess.length} ký tự)`;
         }
-        processSelectionWithAI(selectedText);
+
+        const cleaned = textToProcess.replace(/[\s\-_–—>><=.,:;!?()[\]{}]+/g, '');
+        if (textToProcess.length < 3 || cleaned.length < 2) {
+          showToast(`⚠️ Cụm từ "${textToProcess}" không hợp lệ`);
+        } else {
+          showToast(`⚡ Nhận diện: "${textToProcess.substring(0, 22)}..."`);
+        }
+        processSelectionWithAI(textToProcess);
       }
     }, 100);
   });

@@ -125,6 +125,50 @@ STOP_WORDS = set([
     'quá', 'rồi', 'bởi', 'do', 'vì', 'nên', 'mà', 'cũng', 'chỉ', 'còn', 'vẫn', 'đều', 'hay', 'nếu', 'tuy', 'dù'
 ])
 
+VN_CHARS = 'a-zA-Z0-9àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệđìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ'
+
+def is_word_boundary_match(token, text):
+    if not token or not text:
+        return False
+    pattern = r'(?<![' + VN_CHARS + r'])' + re.escape(token.strip()) + r'(?![' + VN_CHARS + r'])'
+    return bool(re.search(pattern, text, re.IGNORECASE))
+
+def snap_selection_to_slide(selected_text, slide_text):
+    """
+    Tự động bắt dính ranh giới từ nguyên vẹn nếu học viên bôi đen trượt/thiếu ký tự ở đầu hoặc cuối.
+    Ví dụ: 'ghẽn' -> 'nghẽn cổ chai', 'ransformer' -> 'Transformer', 'ttention' -> 'Attention'.
+    """
+    if not selected_text or not slide_text:
+        return selected_text
+    st = selected_text.strip()
+    
+    # 1. Nếu đã là từ/cụm từ nguyên vẹn với ranh giới từ rõ ràng
+    if is_word_boundary_match(st, slide_text):
+        # Nếu chỉ bôi từ đơn 'nghẽn', kiểm tra xem trên slide có nằm trong cụm 'nghẽn cổ chai' không
+        pattern_phrase = r'(?<![' + VN_CHARS + r'])nghẽn\s+cổ\s+chai(?![' + VN_CHARS + r'])'
+        if st.lower() == 'nghẽn' and re.search(pattern_phrase, slide_text, re.IGNORECASE):
+            return 'nghẽn cổ chai'
+        return st
+        
+    # 2. Nếu là chuỗi con bị cắt cụt đầu hoặc đuôi (ví dụ 'ghẽn', 'ransformer')
+    idx = slide_text.lower().find(st.lower())
+    if idx != -1:
+        start = idx
+        while start > 0 and re.match(r'[' + VN_CHARS + r']', slide_text[start-1]):
+            start -= 1
+        end = idx + len(st)
+        while end < len(slide_text) and re.match(r'[' + VN_CHARS + r']', slide_text[end]):
+            end += 1
+        expanded = slide_text[start:end].strip()
+        
+        # Kiểm tra nếu từ được khôi phục nằm trong cụm từ cốt lõi
+        pattern_phrase = r'(?<![' + VN_CHARS + r'])nghẽn\s+cổ\s+chai(?![' + VN_CHARS + r'])'
+        if expanded.lower() == 'nghẽn' and re.search(pattern_phrase, slide_text, re.IGNORECASE):
+            return 'nghẽn cổ chai'
+            
+        return expanded
+    return st
+
 def tokenize(text):
     return [w for w in re.findall(r'\w+', text.lower()) if len(w) > 1]
 
@@ -161,18 +205,20 @@ def rank_documents(query, documents, user_text='', text_key='text', top_k=3, pre
         txt_norm = normalize_text_stems(txt)
         score = 0
         
-        # 1. Khớp nguyên văn query hoặc user_text (có hỗ trợ chuẩn hóa số nhiều/số ít)
-        if query_lower and (query_lower in txt or (q_norm and q_norm in txt_norm)):
-            score += 60
-        if user_text and len(user_text) > 2 and (user_text.lower().strip() in txt or (normalize_text_stems(user_text) in txt_norm)):
-            score += 40
+        # 1. Khớp nguyên văn query hoặc user_text (có kiểm tra ranh giới từ tránh match bừa chuỗi cụt)
+        if query_lower:
+            if is_word_boundary_match(query_lower, txt) or (q_norm and is_word_boundary_match(q_norm, txt_norm)):
+                score += 60
+        if user_text and len(user_text) > 2:
+            if is_word_boundary_match(user_text, txt) or (normalize_text_stems(user_text) and is_word_boundary_match(normalize_text_stems(user_text), txt_norm)):
+                score += 40
             
         # 2. Khớp cụm từ (n-grams)
         matched_phrases = 0
         for p in phrases:
             p_w = p.split()
             p_norm = normalize_text_stems(p)
-            if any(w not in STOP_WORDS for w in p_w) and (p in txt or p_norm in txt_norm):
+            if any(w not in STOP_WORDS for w in p_w) and (is_word_boundary_match(p, txt) or (p_norm and is_word_boundary_match(p_norm, txt_norm))):
                 score += 30
                 matched_phrases += 1
                 
@@ -362,6 +408,13 @@ def call_openai_gpt(user_text, slide_key, custom_query=None, history_queries=Non
     elif slide_key == 'd4':
         active_slide = next((s for s in ALL_SLIDES if s['source_file'] == 'd4-slide-hackathon.pdf'), None)
 
+    # Auto Word-Boundary Snapping: Phục hồi từ/cụm từ nguyên vẹn nếu học viên bôi đen trượt/thiếu ký tự trên slide
+    if active_slide and user_text and not custom_query:
+        snapped = snap_selection_to_slide(user_text, active_slide['text'])
+        if snapped != user_text:
+            query_target = snapped
+            effective_user_text = snapped
+
     ranked_slides = rank_documents(query_target, ALL_SLIDES, user_text=effective_user_text, text_key='text', top_k=2, min_score=0)
     
     # 2. XÁC ĐỊNH BÀI HỌC VÀ SLIDE MỤC TIÊU (LESSON & SLIDE SCOPING):
@@ -420,7 +473,8 @@ def call_openai_gpt(user_text, slide_key, custom_query=None, history_queries=Non
     )
 
     # Nếu câu hỏi hoặc từ khóa nằm ở file transcript khác trong toàn bộ kho dữ liệu, tìm kiếm toàn cục (min_score=20)
-    if not matched_transcripts:
+    # CHỈ tìm kiếm toàn cục khi khái niệm KHÔNG thuộc về active_slide (bảo toàn tính cô lập bài học, chống trôi dạt ngữ cảnh)
+    if not matched_transcripts and not active_matches_query:
         global_transcripts = rank_documents(query_target, ALL_TRANSCRIPTS, user_text=effective_user_text, text_key='text', top_k=2, min_score=20)
         if global_transcripts:
             matched_transcripts = global_transcripts
@@ -733,6 +787,20 @@ class VLearnHandler(SimpleHTTPRequestHandler):
             custom_query = data.get('custom_query', '').strip() or None
             history_queries = data.get('history_queries', [])
 
+            # Tự động bắt dính ranh giới từ nếu học viên bôi đen trượt trên slide
+            active_s = None
+            if slide_key == 'd1':
+                active_s = next((s for s in ALL_SLIDES if s['source_file'] == 'd1-slide-hackathon.pdf' and s['page_index'] == 8), None)
+            elif slide_key == 'd2':
+                active_s = next((s for s in ALL_SLIDES if s['source_file'] == 'd2-slide-hackathon.pdf' and ('52' in s.get('page_label', '') or 'workflow' in s.get('title','').lower() or s['page_index'] == 20)), None)
+            elif slide_key == 'd4':
+                active_s = next((s for s in ALL_SLIDES if s['source_file'] == 'd4-slide-hackathon.pdf'), None)
+
+            if active_s and user_text and not custom_query:
+                snapped = snap_selection_to_slide(user_text, active_s['text'])
+                if snapped != user_text:
+                    user_text = snapped
+
             # Server Guardrail: Lọc các ký tự bôi đen rác, mũi tên, dấu chấm phẩy hoặc quá ngắn (< 3 ký tự)
             import re
             is_garbage = False
@@ -753,6 +821,12 @@ class VLearnHandler(SimpleHTTPRequestHandler):
                     if len(extracted) < 3 or len(cleaned_ext) < 2:
                         is_garbage = True
                         garbage_target = extracted
+
+            # Kiểm tra nếu người dùng gõ từ đơn lẻ bị vỡ vụn/cụt không tồn tại nguyên từ ở bất kỳ đâu
+            if not is_garbage and garbage_target and not custom_query:
+                target_tokens = tokenize(garbage_target)
+                if len(target_tokens) == 1 and len(target_tokens[0]) <= 5 and not any(is_word_boundary_match(target_tokens[0], d['text']) for d in (ALL_SLIDES + ALL_TRANSCRIPTS)):
+                    is_garbage = True
 
             if is_garbage:
                 ai_res = {
