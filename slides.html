@@ -308,14 +308,14 @@
     <div class="grid-2" style="align-items: stretch; margin-bottom: 0.15in;">
       <div class="card card-highlight" style="display: flex; flex-direction: column; justify-content: space-between;">
         <div>
-          <div class="card-title">🎯 Core JTBD (Chuẩn 1 câu không chứa chữ AI)</div>
+          <div class="card-title">Jobs-to-be-Done</div>
           <div class="card-text" style="font-size: 0.23in; font-weight: 700; color: #0f172a; line-height: 1.45;">
-            "Xác thực và làm rõ ngay lập tức bản chất các khái niệm khó hiểu trên bài giảng dựa trên tài liệu chính thống trong vòng 10 giây để không bị sai lệch kiến thức hoặc đứt mạch tư duy."
+            "Xác thực và làm rõ ngay bản chất các khái niệm khó hiểu trên bài giảng dựa trên tài liệu chính thống với kỳ vọng dưới 10s để không bị sai lệch kiến thức hoặc đứt mạch tư duy."
           </div>
         </div>
         <div class="quote-box" style="margin-top: 0.12in; border-left-color: #dc2626; background: #fef2f2;">
-          <strong style="color: #b91c1c;">Bằng chứng thật (Turn T12701):</strong> Học viên hỏi 5 loại NLP -> Bot xả bài văn dài <strong>1.472 ký tự</strong> và tự bịa ảo giác <strong>[trang 304]</strong> dù slide chỉ có 8 trang!
-          <div class="quote-author" style="color: #b91c1c;">Nguồn đối soát: Chatlog thật tutor_turns.csv</div>
+          <strong style="color: #b91c1c;">Bằng chứng thật (ID T12701 - nguồn tutor_turns.csv):</strong> Học viên hỏi 5 loại NLP -> Bot trả về đoạn dài <strong>1.472 ký tự</strong> và tự bịa số trang trích dẫn ngoài giới hạn nguồn <strong>[trang 304]</strong> 
+         
         </div>
       </div>
 
@@ -330,24 +330,24 @@
         <div class="card card-danger" style="padding: 0.18in 0.24in;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div class="stat-num">89.87%</div>
-            <div class="stat-label" style="text-align: right; color: #991b1b;">Xả văn bản quá tải (Wall of text)<br>Độ dài trung bình 1.051 ký tự</div>
+            <div class="stat-label" style="text-align: right; color: #991b1b;">Văn bản trả về quá dài<br>Độ dài trung bình 1.051 ký tự</div>
           </div>
         </div>
 
         <div class="card" style="padding: 0.18in 0.24in; border-color: #fde047; background: #fefce8;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div class="stat-num" style="color: #ca8a04;">0.21%</div>
-            <div class="stat-label" style="text-align: right; color: #854d0e;">Tỷ lệ hỏi Socratic gợi mở<br>(Chỉ vỏn vẹn 28 / 13.494 lượt)</div>
+            <div class="stat-label" style="text-align: right; color: #854d0e;">Tỷ lệ hỏi Socratic gợi mở<br>(Chỉ 28 / 13.494 lượt)</div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="slide-footer">
+  <!-- <div class="slide-footer">
     <div class="footer-proof">🔍 Nguồn kiểm chứng: Khai phá dữ liệu 13.494 chatlog turns (Batch K1-K4) trong data/vlearn-pack/</div>
     <div>Nhóm LearnLoop · Zone E403 · Ca 3A</div>
-  </div>
+  </div> -->
 </section>
 
 <!-- SLIDE 2: IMPACT & SELECTION -->
@@ -362,7 +362,7 @@
 
   <div class="slide-body">
     <h1 class="slide-heading">Vì Sao Chọn Tối Ưu AI Tutor Hiện Có?</h1>
-    <p class="slide-subheading">Đánh giá 3 ứng viên bài toán dựa trên Quy mô, Tần suất và Chi phí sai lầm (Cost-of-Error)</p>
+    <p class="slide-subheading">Đánh giá 3 ứng viên bài toán dựa trên Quy mô, Tần suất và Chi phí sai lầm</p>
 
     <div style="margin-bottom: 0.18in;">
       <table>
@@ -371,29 +371,29 @@
             <th style="width: 30%;">Ứng viên bài toán</th>
             <th style="width: 17%;">Quy mô</th>
             <th style="width: 14%;">Tần suất</th>
-            <th style="width: 26%;">Chi phí sai lầm (Cost-of-Error)</th>
+            <th style="width: 26%;">Chi phí sai lầm</th>
             <th style="width: 13%;">Quyết định</th>
           </tr>
         </thead>
         <tbody>
           <tr style="background: #eff6ff; border-left: 5px solid #2563eb;">
             <td><strong style="color: #1e3a8a;">1. Tối ưu VLearn Tutor: Grounding & Progressive Disclosure</strong></td>
-            <td><strong style="color: #1d4ed8;">1.617 học viên</strong> (100% xem slide)</td>
-            <td><strong>Rất cao</strong> (Liên tục mỗi buổi)</td>
-            <td><strong style="color: #dc2626;">Chí mạng:</strong> Mất 15-30p tra cứu, hiểu sai thi rớt, mất uy tín nền tảng</td>
-            <td><span class="pill pill-green">CHỌN (Đề A1)</span></td>
+            <td><strong style="color: #1d4ed8;">1.617 học viên</strong></td>
+            <td><strong>Rất cao</strong> </td>
+            <td><strong style="color: #dc2626;">Dành 10 - 15p tra cứu thông tin nhưng không năm được nội dung trọng tâm, ảnh hưởng đến nhận thức cuối cùng.</td>
+            <td><span class="pill pill-green">Chọn track A1</span></td>
           </tr>
           <tr>
             <td><strong>2. Chatbot hỏi đáp chung toàn khóa học</strong></td>
             <td>~40% học viên</td>
-            <td>Thấp - TB</td>
-            <td>Thấp: Học viên có thể hỏi lại Trợ giảng (TA) hoặc Discord</td>
+            <td>Trung bình</td>
+            <td>Thấp: Học viên có thể hỏi lại Trợ giảng hoặc Discord</td>
             <td><span class="pill pill-red">LOẠI</span></td>
           </tr>
           <tr>
-            <td><strong>3. Tự động sinh bài tập trắc nghiệm (Quiz)</strong></td>
+            <td><strong>3. Tự động sinh bài tập trắc nghiệm </strong></td>
             <td>~30% học viên</td>
-            <td>Thấp (Cuối bài)</td>
+            <td>Thấp</td>
             <td>Trung bình: Sinh câu hỏi lệch, học viên chỉ cần bấm chọn lại</td>
             <td><span class="pill pill-red">LOẠI</span></td>
           </tr>
@@ -403,7 +403,7 @@
 
     <div class="card card-highlight" style="display: flex; align-items: center; justify-content: space-between; padding: 0.16in 0.28in;">
       <div style="font-size: 0.21in; color: #0f172a; line-height: 1.45; font-weight: 500;">
-        💡 <strong>Lý do chọn bằng con số:</strong> Đề A1 giải quyết trực diện điểm nghẽn của <strong>13.494 lượt chat thật</strong>, triệt tiêu 28.02% lỗi mất nguồn và có thể đo lường định lượng chính xác 100% trước/sau qua Golden Set 20 Test Cases.
+        💡 <strong>Dẫn chứng :</strong> Quan sát <strong style="color: #dc2626;">13.494 lượt chat thật</strong> (tutor_turns.csv). Đề A1 hướng tới giải quyết điểm nghẽn với mục tiêu loại bỏ 28.02% lỗi không trích nguồn. Kết quả đạt <strong style="color: #dc2626;"> 100% </strong> khi đo lường trong <strong>Golden set 20 test case </strong>
       </div>
       <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.24in; font-weight: 800; color: #1d4ed8; white-space: nowrap; margin-left: 0.25in;">
         Impact: 1.617 Users
@@ -411,10 +411,10 @@
     </div>
   </div>
 
-  <div class="slide-footer">
+  <!-- <div class="slide-footer">
     <div class="footer-proof">📊 Bằng chứng quyết định: Đối soát ma trận Cost-of-Error chi tiết trong spec.md §2</div>
     <div>Nhóm LearnLoop · Zone E403 · Ca 3A</div>
-  </div>
+  </div> -->
 </section>
 
 <!-- SLIDE 3: SOLUTION & DEMO -->
@@ -428,30 +428,30 @@
   </div>
 
   <div class="slide-body">
-    <h1 class="slide-heading">Thiết Kế Lát Cắt & Chuẩn Bị Live Demo</h1>
-    <p class="slide-subheading">Áp dụng triệt để Google PAIR Progressive Disclosure và Microsoft HAX G11 Grounding</p>
+    <h1 class="slide-heading">Thiết Kế Lát Cắt & Demo</h1>
+    <p class="slide-subheading">Áp dụng Google PAIR Progressive Disclosure và Microsoft HAX G11 Grounding</p>
 
     <div class="grid-2" style="margin-bottom: 0.18in;">
       <div class="card card-highlight">
-        <div class="card-title">📐 Lát Cắt MỘT CÂU (Core Feature Slice)</div>
+        <div class="card-title">📐 Thiết Kế Lát Cắt</div>
         <div class="card-text" style="font-size: 0.21in; line-height: 1.45; margin-bottom: 0.12in; color: #0f172a;">
-          Khi học viên bôi đen một thuật ngữ trên slide bài giảng VLearn, AI Tutor cung cấp <strong>micro-summary dưới 250 ký tự</strong> kèm <strong>trích dẫn kép Slide-Transcript</strong> chính xác và <strong>2 câu hỏi gợi ý Socratic</strong> để học viên chủ động đào sâu mà không bị quá tải nhận thức.
+          Khi học viên bôi đen một thuật ngữ trên slide bài giảng VLearn, AI Tutor cung cấp <strong>nội dung cô đọng dưới 250 ký tự</strong> kèm <strong>trích dẫn kép Slide-Transcript</strong> chính xác và <strong>2 câu hỏi gợi ý Socratic</strong> để học viên chủ động hiểu thêm vấn đề mà không bị quá tải.
         </div>
         <div style="background: #ffffff; padding: 0.08in 0.14in; border-radius: 0.08in; font-size: 0.18in; color: #334155; border: 1px solid #cbd5e1;">
-          ⚡ <strong>Mức tự động hóa:</strong> <strong style="color: #1d4ed8;">Conditional Automation</strong> — Trả lời khi có nguồn tin cậy; chặn 0ms khi thao tác lỗi; từ chối trung thực khi ngoài bài.
+          ⚡ <strong>Mức tự động hóa:</strong> <strong style="color: #1d4ed8;">Conditional Automation</strong> — Trả lời khi có nguồn tin cậy, chặn nhanh khi thao tác lỗi và từ chối trung thực khi ngoài bài.
         </div>
       </div>
 
       <div class="card card-success">
-        <div class="card-title" style="color: #047857;">🎬 Kịch Bản Live Demo (5 Phút Tại Chỗ)</div>
+        <div class="card-title" style="color: #047857;">🎬 Kịch Bản Live Demo</div>
         <div style="display: flex; flex-direction: column; gap: 0.1in;">
           <div style="background: #ffffff; padding: 0.1in 0.14in; border-radius: 0.08in; border-left: 4px solid #16a34a; border: 1px solid #bbf7d0; border-left-width: 4px;">
-            <strong style="color: #15803d; font-size: 0.20in;">Ca 1 (Happy Path - Bôi đen Slide 8):</strong>
-            <div style="font-size: 0.18in; color: #1e293b; margin-top: 0.02in;">Bôi đen "Transformer" -> Micro-summary 220 ký tự + Trích dẫn Slide Trang 8 & Transcript [T04-038] + 2 nút Option A / B.</div>
+            <strong style="color: #15803d; font-size: 0.20in;">Case 1 (Happy Path - Slide 8):</strong>
+            <div style="font-size: 0.18in; color: #1e293b; margin-top: 0.02in;">Bôi đen "Transformer" -> Đoạn nội dung tóm tắt (<250 ký tự) + Trích dẫn Slide Trang 8 & Transcript [T04-038] + 2 Option A / B.</div>
           </div>
           <div style="background: #ffffff; padding: 0.1in 0.14in; border-radius: 0.08in; border-left: 4px solid #dc2626; border: 1px solid #fecaca; border-left-width: 4px;">
-            <strong style="color: #b91c1c; font-size: 0.20in;">Ca 2 (Chỗ khó - Failure Defense & Guardrail):</strong>
-            <div style="font-size: 0.18in; color: #1e293b; margin-top: 0.02in;">Bôi nhầm chữ cái đơn 'r' -> Guardrail chặn trong <strong>0ms</strong> (0 token); Hỏi PPO -> Từ chối trung thực ghi rõ bài chưa dạy.</div>
+            <strong style="color: #b91c1c; font-size: 0.20in;">Case 2 (Failure Defense & Guardrail):</strong>
+            <div style="font-size: 0.18in; color: #1e293b; margin-top: 0.02in;">Bôi nhầm chữ cái đơn 'r' -> Guardrail chặn trong <strong>0ms</strong> (0 token). Hỏi PPO -> Từ chối và ghi rõ nội dung chưa dạy.</div>
           </div>
         </div>
       </div>
@@ -464,7 +464,7 @@
       </div>
       <div class="card" style="padding: 0.12in 0.18in; background: #f8fafc;">
         <div style="font-size: 0.19in; font-weight: 800; color: #1d4ed8; margin-bottom: 0.03in;">HAX G11: Grounding Nguồn</div>
-        <div style="font-size: 0.17in; color: #475569;">Badge trích dẫn kép Slide Trang N & Transcript Đoạn [Txx-xxx].</div>
+        <div style="font-size: 0.17in; color: #475569;">Trích dẫn kép Slide pdf & Transcript Đoạn [Txx-xxx].</div>
       </div>
       <div class="card" style="padding: 0.12in 0.18in; background: #f8fafc;">
         <div style="font-size: 0.19in; font-weight: 800; color: #1d4ed8; margin-bottom: 0.03in;">HAX G8: Dual Guardrail</div>
@@ -473,10 +473,10 @@
     </div>
   </div>
 
-  <div class="slide-footer">
+  <!-- <div class="slide-footer">
     <div class="footer-proof">💻 Prototype đang chạy Live API GPT-4o-mini tại http://localhost:8000 (codebase/app.js & server.py)</div>
     <div>Nhóm LearnLoop · Zone E403 · Ca 3A</div>
-  </div>
+  </div> -->
 </section>
 
 <!-- SLIDE 4: EVALUATION & QUALITY BAR -->
@@ -498,7 +498,7 @@
         <thead>
           <tr>
             <th style="width: 25%;">Chỉ số đo lường (Metrics)</th>
-            <th style="width: 22%;">Quality Bar Đã Khóa (CP4)</th>
+            <th style="width: 22%;">Quality Bar</th>
             <th style="width: 25%;">Hệ thống Cũ (Baseline)</th>
             <th style="width: 28%;">LearnLoop Mới (Thực tế)</th>
           </tr>
@@ -508,7 +508,7 @@
             <td><strong>Tỷ lệ Pass Golden Set (20 Cases)</strong></td>
             <td><span class="pill pill-blue">≥ 85.0% Pass</span></td>
             <td><strong style="color: #dc2626;">0.0%</strong> (Dính 5 lỗi kiến trúc)</td>
-            <td><strong style="color: #15803d; font-size: 0.22in;">100.0% (20 / 20 Cases)</strong> <span class="pill pill-green">VƯỢT CHUẨN</span></td>
+            <td><strong style="color: #15803d; font-size: 0.22in;">100.0% (20 / 20 Cases)</strong> </td>
           </tr>
           <tr>
             <td><strong>Độ dài phản hồi trung bình</strong></td>
@@ -531,8 +531,8 @@
           <tr>
             <td><strong>Độ trễ trung bình (Latency)</strong></td>
             <td>< 4.000 ms</td>
-            <td>2.800 ms - 4.200 ms</td>
-            <td><strong>2.682 ms</strong> (0 ms đối với ca Guardrail)</td>
+            <td>Trung bình 4700 ms</td>
+            <td><strong>Trung bình 2680 ms</strong> (0 ms đối với case Guardrail)</td>
           </tr>
         </tbody>
       </table>
@@ -545,10 +545,10 @@
     </div>
   </div>
 
-  <div class="slide-footer">
+  <!-- <div class="slide-footer">
     <div class="footer-proof">📑 Báo cáo kiểm chứng đầy đủ: eval/Bao_cao_kiem_chung_toan_bo_20_test_cases_tu_dong.xlsx</div>
     <div>Nhóm LearnLoop · Zone E403 · Ca 3A</div>
-  </div>
+  </div> -->
 </section>
 
 <!-- SLIDE 5: USER VALIDATION -->
@@ -567,9 +567,9 @@
 
     <div class="grid-2" style="margin-bottom: 0.16in;">
       <div class="card card-highlight">
-        <div class="card-title">💬 Quote Nguyên Văn 1 (Về Tải Nhận Thức)</div>
+        <div class="card-title">💬 Quote 1</div>
         <div class="quote-box" style="font-size: 0.20in; margin-bottom: 0.08in; background: #ffffff;">
-          "Thích nhất là câu trả lời chỉ có đúng 2 câu súc tích. Mình đọc lướt mất 5 giây là hiểu ngay để nghe thầy giảng tiếp, không bị một tràng chữ dài ngoằng làm đứt mạch như bản cũ."
+          "Thích nhất là câu trả lời súc tích, tập trung vào thông tin đang hỏi. Mình đọc lướt khá nhanh là hiểu được và tiếp tục nghe giảng, không bị một tràng chữ dài thông tin như Vlearn làm mình bị rối thông tin."
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div class="quote-author">Hoàng Văn Nam (Học viên Phòng E403 - Lớp 3A)</div>
@@ -578,9 +578,9 @@
       </div>
 
       <div class="card card-highlight">
-        <div class="card-title">💬 Quote Nguyên Văn 2 (Về Tương Tác Socratic)</div>
+        <div class="card-title">💬 Quote 2</div>
         <div class="quote-box" style="font-size: 0.20in; margin-bottom: 0.08in; background: #ffffff;">
-          "Hai cái nút gợi ý đào sâu bên dưới rất tiện. Nhiều khi bôi đen từ mới mình cũng chưa biết phải hỏi gì tiếp, bấm nút là có câu trả lời sâu hơn mà không phải gõ phím."
+          "Hai cái nút gợi ý đào sâu bên dưới rất tiện. Nhiều khi bôi đen từ mới mình cũng chưa biết phải hỏi gì tiếp, bấm nút là có câu trả lời sâu hơn mà không phải gõ phím. Tuy nhiên mình muốn hỏi thêm ngoài 2 câu hỏi đề xuất thì vẫn chưa có."
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div class="quote-author">Lê Minh Tuấn (Học viên Phòng E403 - Lớp 3A)</div>
@@ -600,10 +600,10 @@
     </div>
   </div>
 
-  <div class="slide-footer">
+  <!-- <div class="slide-footer">
     <div class="footer-proof">📋 Biên bản quan sát chi tiết: validation/feedback_log.md (Rubric R6: Bonus +8 Điểm)</div>
     <div>Nhóm LearnLoop · Zone E403 · Ca 3A</div>
-  </div>
+  </div> -->
 </section>
 
 <!-- SLIDE 6: BACKLOG & LESSON -->
@@ -627,8 +627,8 @@
           <div style="display: flex; gap: 0.1in; align-items: flex-start;">
             <span class="pill pill-blue">01</span>
             <div>
-              <strong style="color: #0f172a; font-size: 0.20in;">Phím tắt thông minh (Shortcut Ctrl + Space):</strong>
-              <div style="color: #475569; font-size: 0.18in; margin-top: 0.02in;">Kích hoạt gia sư ngay khi bôi đen mà không cần click chuột, giảm ma sát thao tác.</div>
+              <strong style="color: #0f172a; font-size: 0.20in;">Đồng bộ Video Player 1 chạm (Timestamp Sync):</strong>
+              <div style="color: #475569; font-size: 0.18in; margin-top: 0.02in;">Click vào mã đoạn trích dẫn [T04-038] để video bài giảng tự động nhảy đến đúng giây giảng viên đang nói.</div>
             </div>
           </div>
           <div style="display: flex; gap: 0.1in; align-items: flex-start;">
@@ -650,14 +650,14 @@
 
       <div class="card card-highlight" style="display: flex; flex-direction: column; justify-content: space-around;">
         <div>
-          <div class="card-title">💡 Bài Học Lớn Nhất Của Nhóm (Key Takeaway)</div>
+          <div class="card-title">💡 Bài Học Lớn Nhất Của Nhóm</div>
           <div class="quote-box" style="font-size: 0.20in; line-height: 1.45; border-left-width: 5px; margin-top: 0.06in; background: #ffffff;">
             "Trong sản phẩm AI cho giáo dục, một câu trả lời ngắn có căn cứ 100% luôn giá trị hơn một bài văn dài nhưng phỏng đoán.<br><br>
             <strong style="color: #1e3a8a;">Muốn trị dứt điểm ảo giác trích dẫn, phải giải quyết từ tầng Ingestion dữ liệu và kiến trúc RAG chứ tuyệt đối không thể phó mặc cho sự 'hên xui' của Prompt Engineering."</strong>
           </div>
         </div>
         <div style="background: #ffffff; padding: 0.1in 0.16in; border-radius: 0.08in; font-size: 0.18in; color: #334155; border: 1px solid #cbd5e1; margin-top: 0.08in;">
-          👥 <strong>Nhóm LearnLoop:</strong> Nguyễn Đức Phát (PM) · Chử Trần Phương Nam (Tech Lead) · Đỗ Thành Đạt (AI Eval) · Nguỵ Khắc Phi Long (UX)
+          👥 <strong>Nhóm LearnLoop:</strong> Nguyễn Đức Phát · Chử Trần Phương Nam · Đỗ Thành Đạt · Nguỵ Khắc Phi Long
         </div>
       </div>
     </div>
